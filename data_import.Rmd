@@ -21,5 +21,24 @@ uvoc_15 = haven::read_xpt('./data/UVOC_urine_15_16.xpt')
 pc_13 = haven::read_xpt('./data/EPHPP_13_14.xpt')
 pc_15 = haven::read_xpt('./data/EPHPP_15_16.xpt')
 
+demo_11 = haven::read_xpt('./data/DEMO_11_12.xpt')
+demo_13 = haven::read_xpt('./data/DEMO_13_14.xpt')
+demo_15 = haven::read_xpt('./data/DEMO_15_16.xpt')
+
+```
+
+```{r}
+## checking distributions and missingness
+
+colSums(is.na(bvoc_11))
+colSums(is.na(bvoc_13))
+colSums(is.na(bvoc_15))
+
+colSums(is.na(uvoc_11))
+colSums(is.na(uvoc_13))
+colSums(is.na(uvoc_15))
+
+colSums(is.na(pc_13))
+colSums(is.na(pc_15))
 ```
 
