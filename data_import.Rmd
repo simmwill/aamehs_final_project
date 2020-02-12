@@ -1,0 +1,25 @@
+---
+title: "Data Import & Exploration"
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r}
+library(tidyverse)
+library(haven)
+```
+
+```{r import}
+bvoc_11 = haven::read_xpt('./data/BVOC_blood_11_12.xpt')
+bvoc_13 = haven::read_xpt('./data/BVOC_blood_13_14.xpt')
+bvoc_15 = haven::read_xpt('./data/BVOC_blood_15_16.xpt')
+
+uvoc_11 = haven::read_xpt('./data/UVOC_urine_11_12.xpt') 
+uvoc_13 = haven::read_xpt('./data/UVOC_urine_13_14.xpt')
+uvoc_15 = haven::read_xpt('./data/UVOC_urine_15_16.xpt')
+
+pc_13 = haven::read_xpt('./data/EPHPP_13_14.xpt')
+pc_15 = haven::read_xpt('./data/EPHPP_15_16.xpt')
+
+```
+
