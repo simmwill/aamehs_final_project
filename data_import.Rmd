@@ -10,9 +10,10 @@ library(haven)
 ```
 
 ```{r import}
+## importing and adding year indicator to each dataset
 bvoc_11 = haven::read_xpt('./data/BVOC_blood_11_12.xpt')
-bvoc_13 = haven::read_xpt('./data/BVOC_blood_13_14.xpt')
-bvoc_15 = haven::read_xpt('./data/BVOC_blood_15_16.xpt')
+bvoc_13 = haven::read_xpt('./data/BVOC_blood_13_14.xpt') 
+bvoc_15 = haven::read_xpt('./data/BVOC_blood_15_16.xpt') 
 
 uvoc_11 = haven::read_xpt('./data/UVOC_urine_11_12.xpt') 
 uvoc_13 = haven::read_xpt('./data/UVOC_urine_13_14.xpt')
@@ -40,5 +41,63 @@ colSums(is.na(uvoc_15))
 
 colSums(is.na(pc_13))
 colSums(is.na(pc_15))
+```
+
+```{r}
+## merging datasets for 2011-12
+merged_11 =
+  full_join(                               ## joins first two tables
+    demo_11,
+    bvoc_11,
+    by = "SEQN"
+  ) %>% 
+  full_join(                               ## joins third table (can only join two at a time)
+    .,
+    uvoc_11,
+    by = "SEQN"
+  ) %>% 
+  mutate(year = "11_12",
+         year = as.factor(year))            ## adds label for year
+
+## merging datasets for 2013-14
+merged_13 =
+  full_join(                                ## first two
+    demo_13,
+    bvoc_13,
+    by = "SEQN"
+  ) %>% 
+  full_join(                               ## third
+    .,
+    uvoc_13,
+    by = "SEQN"
+  ) %>% 
+  full_join(                                ## fourth (four available for 13-14, 15-16)
+    .,
+    pc_13,
+    by = "SEQN"
+  ) %>% 
+  mutate(year = "13_14",
+       year = as.factor(year))            ## adds label for year
+
+## merging datasets for 2015-16
+merged_15 =
+  full_join(                                ## first two
+    demo_15,
+    bvoc_15,
+    by = "SEQN"
+  ) %>% 
+  full_join(                               ## third
+    .,
+    uvoc_15,
+    by = "SEQN"
+  ) %>% 
+  full_join(                                ## fourth (four available for 13-14, 15-16)
+    .,
+    pc_15,
+    by = "SEQN"
+  ) %>% 
+  mutate(year = "15_16",
+         year = as.factor(year))            ## adds label for year
+
 ```
 
