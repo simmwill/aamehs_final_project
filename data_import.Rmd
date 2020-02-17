@@ -11,20 +11,40 @@ library(haven)
 
 ```{r import}
 ## importing and adding year indicator to each dataset
+
+# blood VOC
 bvoc_11 = haven::read_xpt('./data/BVOC_blood_11_12.xpt')
 bvoc_13 = haven::read_xpt('./data/BVOC_blood_13_14.xpt') 
 bvoc_15 = haven::read_xpt('./data/BVOC_blood_15_16.xpt') 
 
+# urine VOC
 uvoc_11 = haven::read_xpt('./data/UVOC_urine_11_12.xpt') 
 uvoc_13 = haven::read_xpt('./data/UVOC_urine_13_14.xpt')
 uvoc_15 = haven::read_xpt('./data/UVOC_urine_15_16.xpt')
 
+# personal cosmetics etc.
+pc_11 = haven::read_xpt('./data/EPH_11_12.xpt')           ## different dataset for bisphenols 11-12
 pc_13 = haven::read_xpt('./data/EPHPP_13_14.xpt')
 pc_15 = haven::read_xpt('./data/EPHPP_15_16.xpt')
 
+# demographics
 demo_11 = haven::read_xpt('./data/DEMO_11_12.xpt')
 demo_13 = haven::read_xpt('./data/DEMO_13_14.xpt')
 demo_15 = haven::read_xpt('./data/DEMO_15_16.xpt')
+
+# medical conditions
+med_11 = haven::read_xpt('./data/MCQ_11_12.xpt')
+med_13 = haven::read_xpt('./data/MCQ_13_14.xpt')
+med_15 = haven::read_xpt('./data/MCQ_15_16.xpt')
+
+# bmi 
+bmi_11 = haven::read_xpt('./data/BMX_11_12.xpt')
+bmi_13 = haven::read_xpt('./data/BMX_13_14.xpt')
+bmi_15 = haven::read_xpt('./data/BMX_15_16.xpt')
+
+# reprod health
+fert_13 = haven::read_xpt('./data/RHQ_13_14.xpt')
+fert_15 = haven::read_xpt('./data/RHQ_15_16.xpt')
 
 ```
 
@@ -56,6 +76,11 @@ merged_11 =
     uvoc_11,
     by = "SEQN"
   ) %>% 
+  full_join(
+    .,
+    med_11,
+    by = "SEQN"
+  ) %>% 
   mutate(year = "11_12",
          year = as.factor(year))            ## adds label for year
 
@@ -74,6 +99,11 @@ merged_13 =
   full_join(                                ## fourth (four available for 13-14, 15-16)
     .,
     pc_13,
+    by = "SEQN"
+  ) %>% 
+  full_join(
+    .,
+    med_13,
     by = "SEQN"
   ) %>% 
   mutate(year = "13_14",
@@ -96,8 +126,209 @@ merged_15 =
     pc_15,
     by = "SEQN"
   ) %>% 
+  full_join(
+    .,
+    med_15,
+    by = "SEQN"
+  ) %>% 
   mutate(year = "15_16",
          year = as.factor(year))            ## adds label for year
 
+```
+
+```{r}
+## exploring hypotheses
+
+sapply(merged_15, class)
+
+# ## looking at correlations among random subsets of variables
+# merged_15[, c(sample(ncol(merged_15), 30))] %>%     ## selects 15 random columns
+#   select_if(., is.numeric) %>%    ## selects only numeric columns
+#   cor(., use = "pairwise.complete.obs") %>% 
+#   corrplot::corrplot()
+
+```
+
+# Distributions
+
+## Outcomes
+
+Thyroid:
+
+  * MCQ160m/MCQ170m/MCQ180m - in med_1x datasets
+  * Also another dataset (THYROD_x) with biological measurements if we want to download
+  
+Obesity:
+  
+  * BMXBMI - BMI meas in bmi_x data
+    + Need to categorize
+    
+Reproductive health:
+
+  * Fertility 13-14 and 15-16 only
+  * RHQ074/RHQ076 - fertility Qs in fert_x data
+  
+## Exposures
+
+  * In different dataset 2011-12 (EPH_G) than 13-14 and 15-16 (EPHPP_H/I)
+  * Bisphenols - in pc_x data 
+
+```{r}
+
+######### THYROID #######
+
+med_11 =
+  med_11 %>% 
+  mutate(
+    year = "11_12"
+  )
+
+med_13 =
+  med_13 %>% 
+  mutate(
+    year = "13_14"
+  )
+
+med_15 =
+  med_15 %>% 
+  mutate(
+    year = "15_16"
+  )
+
+thyroid =
+  full_join(
+    med_11,
+    med_13
+  ) %>% 
+  full_join(
+    .,
+    med_15
+  ) %>% 
+  select(
+    SEQN,
+    MCQ160M, MCQ170M #MCQ180M          ## thyroid Qs
+  ) 
+
+
+##### OBESITY #######
+obesity =
+  full_join(
+    bmi_11,
+    bmi_13
+  ) %>% 
+  full_join(
+    .,
+    bmi_15
+  ) %>% 
+  select(
+    SEQN,
+    BMXBMI
+  ) %>% drop_na()
+
+
+##### FERTILITY #########
+
+fert =
+  full_join(
+    fert_13,
+    fert_15
+  ) %>% 
+  select(
+    SEQN,
+    RHQ074, RHQ076
+  )
+
+##### BISPHENOLS ######
+
+bisphenols =
+  full_join(
+    pc_11,
+    pc_13
+  ) %>% 
+  full_join(
+    .,
+    pc_15
+  ) 
+  
+##### FULL DATA #####
+
+thy_ob =
+  full_join(
+    thyroid,
+    obesity,
+    by = "SEQN"
+  ) %>% drop_na(MCQ160M, BMXBMI)   ## don't drop missing drom MCQ170M - all 'no' for first Q have NA for second Q
+
+## thyroid + ob = left with 16182 obs
+
+fert_ob =
+  full_join(
+    fert,
+    obesity,
+    by = "SEQN"
+  ) %>% drop_na()
+  
+## fertility + obesity - left with 3687 obs
+
+##### FERTILITY GRAPHS #####
+a =
+  fert_ob %>% 
+  rename(
+    tried_year = RHQ074,
+    seen_doc = RHQ076
+  ) %>% 
+  mutate(
+    tried_year = as.factor(tried_year),
+    seen_doc = as.factor(seen_doc)
+  ) %>% 
+  ggplot(aes(x = tried_year)) +
+  geom_bar()
+
+b = 
+  fert_ob %>% 
+  rename(
+    tried_year = RHQ074,
+    seen_doc = RHQ076
+  ) %>% 
+  mutate(
+    tried_year = as.factor(tried_year),
+    seen_doc = as.factor(seen_doc)
+  ) %>% 
+  ggplot(aes(x = seen_doc)) +
+  geom_bar()
+
+library(patchwork)
+
+a + b
+
+
+##### THYROID GRAphs #####
+c =
+  thy_ob %>% 
+  rename(
+    ever = MCQ160M,
+    still = MCQ170M
+  ) %>% 
+  mutate(
+    ever = as.factor(ever),
+    still = as.factor(still)
+  ) %>% 
+  ggplot(aes(x = ever)) +
+  geom_bar()
+
+d =
+  thy_ob %>% 
+  rename(
+    ever = MCQ160M,
+    still = MCQ170M
+  ) %>% 
+  mutate(
+    ever = as.factor(ever),
+    still = as.factor(still)
+  ) %>% 
+  ggplot(aes(x = still)) +
+  geom_bar()
+
+c + d
 ```
 
