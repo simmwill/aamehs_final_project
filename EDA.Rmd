@@ -1,0 +1,259 @@
+---
+title: "Exploratory Analysis"
+author: "Will Simmons"
+date: "3/1/2020"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+
+```{r}
+library(tidyverse)
+#library(gt)
+```
+
+Importing data
+
+```{r import}
+######## importing and adding year indicator to each dataset
+
+# blood VOC
+bvoc_11 = haven::read_xpt('./data/BVOC_blood_11_12.xpt')
+bvoc_13 = haven::read_xpt('./data/BVOC_blood_13_14.xpt') 
+bvoc_15 = haven::read_xpt('./data/BVOC_blood_15_16.xpt') 
+
+# urine VOC
+uvoc_11 = haven::read_xpt('./data/UVOC_urine_11_12.xpt') 
+uvoc_13 = haven::read_xpt('./data/UVOC_urine_13_14.xpt')
+uvoc_15 = haven::read_xpt('./data/UVOC_urine_15_16.xpt')
+
+# personal cosmetics etc.
+pc_11 = haven::read_xpt('./data/EPH_11_12.xpt')           ## different dataset for bisphenols 11-12
+pc_13 = haven::read_xpt('./data/EPHPP_13_14.xpt')
+pc_15 = haven::read_xpt('./data/EPHPP_15_16.xpt')
+
+# demographics
+demo_11 = haven::read_xpt('./data/DEMO_11_12.xpt')
+demo_13 = haven::read_xpt('./data/DEMO_13_14.xpt')
+demo_15 = haven::read_xpt('./data/DEMO_15_16.xpt')
+
+# medical conditions
+med_11 = haven::read_xpt('./data/MCQ_11_12.xpt')
+med_13 = haven::read_xpt('./data/MCQ_13_14.xpt')
+med_15 = haven::read_xpt('./data/MCQ_15_16.xpt')
+
+# bmi 
+bmi_11 = haven::read_xpt('./data/BMX_11_12.xpt')
+bmi_13 = haven::read_xpt('./data/BMX_13_14.xpt')
+bmi_15 = haven::read_xpt('./data/BMX_15_16.xpt')
+
+
+## idea - THYROD_G (2011-12) could be used for sensitivity analysis (seems no clinical thyroid data after 2012)
+
+```
+
+Creating year-specific DFs
+
+```{r yearly_dfs}
+
+data_11 =
+  list(bvoc_11, uvoc_11, pc_11,    ## exposures
+       med_11,    ## outcomes
+       bmi_11, demo_11) %>%      ## covariates
+  reduce(full_join, by = "SEQN") %>% 
+  mutate(year = "11_12")
+
+data_13 =
+  list(bvoc_13, uvoc_13, pc_13,    ## exposures
+       med_13,    ## outcomes
+       bmi_13, demo_13) %>%      ## covariates
+  reduce(full_join, by = "SEQN") %>% 
+  mutate(year = "13_14")
+
+data_15 =
+  list(bvoc_15, uvoc_15, pc_15,    ## exposures
+       med_15,    ## outcomes
+       bmi_15, demo_15) %>%      ## covariates
+  reduce(full_join, by = "SEQN") %>% 
+  mutate(year = "15_16")
+
+```
+
+Extracting summaries of variables
+
+```{r summaries}
+
+## exposures
+
+## ugh - BPS and BPF only included in 13 and 15
+
+# data_11 %>% 
+#   select(
+#     bpa_u = URXBPH,   ## urinary BPA
+#     bpa_u_det = URDBPHLC,   ## 1 = below lower detection limit
+#     
+#   )
+
+join_13 =
+  data_13 %>% 
+  mutate(year = "13_14") %>% 
+  select(
+    year,
+    id = SEQN,    ## unique ID
+    
+    ## EXPOSURES
+    
+    bpa_u = URXBPH,   ## urinary BPA
+    bpa_u_det = URDBPHLC,   ## 1 = below lower detection limit
+    bpf_u = URXBPF,
+    bpf_u_det = URDBPFLC,
+    bps_u = URXBPS,
+    bps_u_det = URDBPSLC,
+    
+    # triclocarban_u = URXTLC,  ## Urinary Triclocarban (ng/mL)
+    # triclocarban_u_det = URDTLCLC,  ## Urinary Triclocarban comment
+    # triclosan_u = URXTRS,  ## Urinary Triclosan (ng/mL)
+    # triclosan_u_det = URDTRSLC,  ## Urinary Triclosan comment
+    # butyl_paraben_u = URXBUP,  ## Butyl paraben (ng/ml)
+    # butyl_paraben_u_det = URDBUPLC,  ## Butyl paraben comment
+    # ethyl_paraben_u = URXEPB,  ## Ethyl paraben (ng/ml)
+    # ethyl_paraben_u_det = URDEPBLC,  ## Ethyl paraben comment
+    # methyl_paraben_u = URXMPB,  ## Methyl paraben (ng/ml)
+    # methyl_paraben_u_det = URDMPBLC,  ## Methyl paraben comment
+    # propyl_paraben_u = URXPPB,  ## Propyl paraben (ng/ml)
+    # propyl_paraben_u_det = URDPPBLC,  ## Propyl paraben comment
+    # dichlorophenol_2_5_u = URX14D,  ## 2,5-dichlorophenol (ug/L)
+    # dichlorophenol_2_5_u_det = URD14DLC,  ## 2,5-dichlorophenol comment
+    # dichlorophenol_2_4_u = URXDCB,  ## 2,4-dichlorophenol (ug/L)
+    # dichlorophenol_2_4_u_det = URDDCBLC,  ## 2,4-dichlorophenol comment
+    # # creatinine_u = URXUCR,  ## Urinary creatinine (no comment for detection limit) -- two measures of this, ignoring for now
+    
+    # ^^ Want to add VOCs? ^^ #
+    
+    ## OUTCOMES
+    
+    thyroid_problem = MCQ160M,  ## ever told you had thyroid problem
+    thyroid_current = MCQ170M,  ## still have thyroid problem
+    #thyroid_age = MCQ180M       ## age at which told you had thyroid problem - shouldn't be relevant since cross-sectional?
+    
+    ## COVARIATES
+    
+    bmi = BMXBMI,
+    sex = RIAGENDR,
+    age = RIDAGEYR,
+    race = RIDRETH3     ## 1 = mex am, 2 = other hisp, 3 = non-hisp white, 4 = nh black, [no 5], 6 = nh asian, 7 = other/multi
+    
+  )
+
+## phew - lots missing. look at studies to see how many they ended up including; think about potential missingness pattern.
+
+join_15 =
+  data_15 %>% 
+  mutate(year = "15_16") %>% 
+  select(
+    year,
+    id = SEQN,    ## unique ID
+    
+    ## EXPOSURES
+    
+    bpa_u = URXBPH,   ## urinary BPA
+    bpa_u_det = URDBPHLC,   ## 1 = below lower detection limit
+    bpf_u = URXBPF,
+    bpf_u_det = URDBPFLC,
+    bps_u = URXBPS,
+    bps_u_det = URDBPSLC,
+    
+    # triclocarban_u = URXTLC,  ## Urinary Triclocarban (ng/mL)
+    # triclocarban_u_det = URDTLCLC,  ## Urinary Triclocarban comment
+    # triclosan_u = URXTRS,  ## Urinary Triclosan (ng/mL)
+    # triclosan_u_det = URDTRSLC,  ## Urinary Triclosan comment
+    # butyl_paraben_u = URXBUP,  ## Butyl paraben (ng/ml)
+    # butyl_paraben_u_det = URDBUPLC,  ## Butyl paraben comment
+    # ethyl_paraben_u = URXEPB,  ## Ethyl paraben (ng/ml)
+    # ethyl_paraben_u_det = URDEPBLC,  ## Ethyl paraben comment
+    # methyl_paraben_u = URXMPB,  ## Methyl paraben (ng/ml)
+    # methyl_paraben_u_det = URDMPBLC,  ## Methyl paraben comment
+    # propyl_paraben_u = URXPPB,  ## Propyl paraben (ng/ml)
+    # propyl_paraben_u_det = URDPPBLC,  ## Propyl paraben comment
+    # dichlorophenol_2_5_u = URX14D,  ## 2,5-dichlorophenol (ug/L)
+    # dichlorophenol_2_5_u_det = URD14DLC,  ## 2,5-dichlorophenol comment
+    # dichlorophenol_2_4_u = URXDCB,  ## 2,4-dichlorophenol (ug/L)
+    # dichlorophenol_2_4_u_det = URDDCBLC,  ## 2,4-dichlorophenol comment
+    # # creatinine_u = URXUCR,  ## Urinary creatinine (no comment for detection limit) -- two measures of this, ignoring for now
+    
+    # ^^ Want to add VOCs? ^^ #
+    
+    ## OUTCOMES
+    
+    thyroid_problem = MCQ160M,  ## ever told you had thyroid problem
+    thyroid_current = MCQ170M,  ## still have thyroid problem
+    #thyroid_age = MCQ180M       ## age at which told you had thyroid problem - shouldn't be relevant since cross-sectional?
+    
+    ## COVARIATES
+    
+    bmi = BMXBMI,
+    sex = RIAGENDR,
+    age = RIDAGEYR,
+    race = RIDRETH3     ## 1 = mex am, 2 = other hisp, 3 = non-hisp white, 4 = nh black, [no 5], 6 = nh asian, 7 = other/multi
+    
+  )
+
+joined = 
+  full_join(
+    join_13,
+    join_15
+  )
+
+joined %>% Amelia::missmap()
+
+data_nomiss =
+  joined %>% 
+  mutate(thyroid = case_when(thyroid_problem == 2 ~ "Never",
+                             thyroid_problem == 1 & thyroid_current == 2 ~ "Former",
+                             thyroid_problem == 1 & thyroid_current == 1 ~ "current"),
+         thyroid_ever = case_when(thyroid_problem == 2 ~ "Never",
+                                  thyroid_problem == 1 ~ "Ever"),
+         year = as.factor(year)) %>% 
+  # group_by(thyroid) %>% 
+  # summarize(count = n()) %>% 
+  select(-thyroid_current, -thyroid_problem) %>% 
+  drop_na()
+  Amelia::missmap()
+
+  drop_na()
+```
+
+Exploratory analysis
+
+```{r}
+
+data_nomiss %>% 
+  ggplot(aes(x = thyroid)) +
+  geom_bar()
+
+data_nomiss %>% 
+##  janitor::tabyl() #for cross-tabs
+  pivot_longer(
+    c(bpa_u, bps_u, bpf_u),
+    names_to = 'bisphenol',
+    values_to = 'value'
+  ) %>% 
+  group_by(bisphenol) %>% 
+  ggplot(aes(x = thyroid_ever, y = log10(value))) + 
+  geom_violin(aes(fill = bisphenol), color = "blue", alpha = .5) + 
+  stat_summary(fun.y = median, geom = "point", color = "blue", size = 4)
+
+data_nomiss %>% 
+  group_by(thyroid_ever) %>% 
+  summarize(bpa = mean(bpa_u), bps = mean(bps_u), bpf = mean(bpf_u))
+
+data_nomiss %>% 
+  mutate(thyroid_current = thyroid_current - 1) %>%    ## make into 0/1
+  glm(formula = thyroid_current ~ bpa_u + age + sex + race + bmi,
+      data = .,
+      family = "binomial") %>% broom::tidy()
+
+```
+
+
