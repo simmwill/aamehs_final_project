@@ -13,6 +13,8 @@ library(tidyverse)
 #library(gt)
 ```
 
+hello, world! pt 2
+
 Importing data
 
 ```{r import}
@@ -217,7 +219,7 @@ data_nomiss =
          year = as.factor(year)) %>% 
   # group_by(thyroid) %>% 
   # summarize(count = n()) %>% 
-  select(-thyroid_current, -thyroid_problem) %>% 
+  # select(-thyroid_current, -thyroid_problem) %>% 
   drop_na()
   Amelia::missmap()
 
@@ -248,9 +250,9 @@ data_nomiss %>%
   group_by(thyroid_ever) %>% 
   summarize(bpa = mean(bpa_u), bps = mean(bps_u), bpf = mean(bpf_u))
 
-data_nomiss %>% 
+data_nomiss %>%
   mutate(thyroid_current = thyroid_current - 1) %>%    ## make into 0/1
-  glm(formula = thyroid_current ~ bpa_u + age + sex + race + bmi,
+  glm(formula = thyroid_current ~ bpa_u, # + age + sex + race + bmi,
       data = .,
       family = "binomial") %>% broom::tidy()
 
