@@ -3,7 +3,7 @@
 
 
 ## Load data and clean it up
-{r data}
+r data
 # Load data
 
 #Demographic files
