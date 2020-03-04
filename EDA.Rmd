@@ -10,6 +10,8 @@ editor_options:
 ```{r}
 library(tidyverse)
 #library(gt)
+knitr::opts_knit$set(dev.args = list(type = "cairo"))
+
 ```
 
 Importing data
@@ -59,21 +61,21 @@ Creating year-specific DFs
 data_11 =
   list(bvoc_11, uvoc_11, pc_11,    ## exposures
        med_11,    ## outcomes
-       bmi_11, demo_11) %>%      ## covariates
+       demo_11) %>%      ## covariates - removed BMI
   reduce(full_join, by = "SEQN") %>% 
   mutate(year = "11_12")
 
 data_13 =
   list(bvoc_13, uvoc_13, pc_13,    ## exposures
        med_13,    ## outcomes
-       bmi_13, demo_13) %>%      ## covariates
+       demo_13) %>%      ## covariates - removed BMI
   reduce(full_join, by = "SEQN") %>% 
   mutate(year = "13_14")
 
 data_15 =
   list(bvoc_15, uvoc_15, pc_15,    ## exposures
        med_15,    ## outcomes
-       bmi_15, demo_15) %>%      ## covariates
+       demo_15) %>%      ## covariates - removed bmi
   reduce(full_join, by = "SEQN") %>% 
   mutate(year = "15_16")
 
@@ -138,7 +140,7 @@ join_13 =
     
     ## COVARIATES
     
-    bmi = BMXBMI,
+    # bmi = BMXBMI,
     sex = RIAGENDR,
     age = RIDAGEYR,
     race = RIDRETH3     ## 1 = mex am, 2 = other hisp, 3 = non-hisp white, 4 = nh black, [no 5], 6 = nh asian, 7 = other/multi
@@ -191,7 +193,7 @@ join_15 =
     
     ## COVARIATES
     
-    bmi = BMXBMI,
+    # bmi = BMXBMI,
     sex = RIAGENDR,
     age = RIDAGEYR,
     race = RIDRETH3     ## 1 = mex am, 2 = other hisp, 3 = non-hisp white, 4 = nh black, [no 5], 6 = nh asian, 7 = other/multi
@@ -208,19 +210,19 @@ joined %>% Amelia::missmap()
 
 data_nomiss =
   joined %>% 
-  mutate(thyroid = case_when(thyroid_problem == 2 ~ "Never",
-                             thyroid_problem == 1 & thyroid_current == 2 ~ "Former",
-                             thyroid_problem == 1 & thyroid_current == 1 ~ "current"),
-         thyroid_ever = case_when(thyroid_problem == 2 ~ "Never",
-                                  thyroid_problem == 1 ~ "Ever"),
+  mutate(
+        # thyroid = case_when(thyroid_problem == 2 ~ "Never",
+        #                      thyroid_problem == 1 & thyroid_current == 2 ~ "Former",
+        #                      thyroid_problem == 1 & thyroid_current == 1 ~ "current"),
+        #  thyroid_ever = case_when(thyroid_problem == 2 ~ "Never",
+        #                           thyroid_problem == 1 ~ "Ever"),
          year = as.factor(year)) %>% 
   # group_by(thyroid) %>% 
   # summarize(count = n()) %>% 
   # select(-thyroid_current, -thyroid_problem) %>% 
-  drop_na()
+  drop_na(-thyroid_current)  ## drop all NAs except those in thyroid_current - some who respond NA answered no to prior question
   Amelia::missmap()
 
-  drop_na()
 ```
 
 Exploratory analysis
@@ -255,4 +257,278 @@ data_nomiss %>%
 
 ```
 
+Project Deliverable #3
+
+```{r}
+###### missingness #####
+
+# using join_13, join_15
+
+# data_13 =
+#   list(bvoc_13, uvoc_13, pc_13,    ## exposures
+#        med_13,    ## outcomes
+#        demo_13) %>%      ## covariates - removed BMI
+#   reduce(full_join, by = "SEQN") %>% 
+#   mutate(year = "13_14")
+# 
+# data_15 =
+#   list(bvoc_15, uvoc_15, pc_15,    ## exposures
+#        med_15,    ## outcomes
+#        demo_15) %>%      ## covariates - removed bmi
+#   reduce(full_join, by = "SEQN") %>% 
+#   mutate(year = "15_16")
+
+# join_13 =
+#   data_13 %>% 
+#   mutate(year = "13_14") %>% 
+#   select(
+#     year,
+#     id = SEQN,    ## unique ID
+#     
+#     ## EXPOSURES
+#     
+#     bpa_u = URXBPH,   ## urinary BPA
+#     bpa_u_det = URDBPHLC,   ## 1 = below lower detection limit
+#     bpf_u = URXBPF,
+#     bpf_u_det = URDBPFLC,
+#     bps_u = URXBPS,
+#     bps_u_det = URDBPSLC,
+#     
+#     # triclocarban_u = URXTLC,  ## Urinary Triclocarban (ng/mL)
+#     # triclocarban_u_det = URDTLCLC,  ## Urinary Triclocarban comment
+#     # triclosan_u = URXTRS,  ## Urinary Triclosan (ng/mL)
+#     # triclosan_u_det = URDTRSLC,  ## Urinary Triclosan comment
+#     # butyl_paraben_u = URXBUP,  ## Butyl paraben (ng/ml)
+#     # butyl_paraben_u_det = URDBUPLC,  ## Butyl paraben comment
+#     # ethyl_paraben_u = URXEPB,  ## Ethyl paraben (ng/ml)
+#     # ethyl_paraben_u_det = URDEPBLC,  ## Ethyl paraben comment
+#     # methyl_paraben_u = URXMPB,  ## Methyl paraben (ng/ml)
+#     # methyl_paraben_u_det = URDMPBLC,  ## Methyl paraben comment
+#     # propyl_paraben_u = URXPPB,  ## Propyl paraben (ng/ml)
+#     # propyl_paraben_u_det = URDPPBLC,  ## Propyl paraben comment
+#     # dichlorophenol_2_5_u = URX14D,  ## 2,5-dichlorophenol (ug/L)
+#     # dichlorophenol_2_5_u_det = URD14DLC,  ## 2,5-dichlorophenol comment
+#     # dichlorophenol_2_4_u = URXDCB,  ## 2,4-dichlorophenol (ug/L)
+#     # dichlorophenol_2_4_u_det = URDDCBLC,  ## 2,4-dichlorophenol comment
+#     # # creatinine_u = URXUCR,  ## Urinary creatinine (no comment for detection limit) -- two measures of this, ignoring for now
+#     
+#     # ^^ Want to add VOCs? ^^ #
+#     
+#     ## OUTCOMES
+#     
+#     thyroid_problem = MCQ160M,  ## ever told you had thyroid problem
+#     thyroid_current = MCQ170M,  ## still have thyroid problem
+#     #thyroid_age = MCQ180M       ## age at which told you had thyroid problem - shouldn't be relevant since cross-sectional?
+#     
+#     ## COVARIATES
+#     
+#     # bmi = BMXBMI,
+#     sex = RIAGENDR,
+#     age = RIDAGEYR,
+#     race = RIDRETH3     ## 1 = mex am, 2 = other hisp, 3 = non-hisp white, 4 = nh black, [no 5], 6 = nh asian, 7 = other/multi
+#     
+#   )
+# 
+# ## phew - lots missing. look at studies to see how many they ended up including; think about potential missingness pattern.
+# 
+# join_15 =
+#   data_15 %>% 
+#   mutate(year = "15_16") %>% 
+#   select(
+#     year,
+#     id = SEQN,    ## unique ID
+#     
+#     ## EXPOSURES
+#     
+#     bpa_u = URXBPH,   ## urinary BPA
+#     bpa_u_det = URDBPHLC,   ## 1 = below lower detection limit
+#     bpf_u = URXBPF,
+#     bpf_u_det = URDBPFLC,
+#     bps_u = URXBPS,
+#     bps_u_det = URDBPSLC,
+#     
+#     # triclocarban_u = URXTLC,  ## Urinary Triclocarban (ng/mL)
+#     # triclocarban_u_det = URDTLCLC,  ## Urinary Triclocarban comment
+#     # triclosan_u = URXTRS,  ## Urinary Triclosan (ng/mL)
+#     # triclosan_u_det = URDTRSLC,  ## Urinary Triclosan comment
+#     # butyl_paraben_u = URXBUP,  ## Butyl paraben (ng/ml)
+#     # butyl_paraben_u_det = URDBUPLC,  ## Butyl paraben comment
+#     # ethyl_paraben_u = URXEPB,  ## Ethyl paraben (ng/ml)
+#     # ethyl_paraben_u_det = URDEPBLC,  ## Ethyl paraben comment
+#     # methyl_paraben_u = URXMPB,  ## Methyl paraben (ng/ml)
+#     # methyl_paraben_u_det = URDMPBLC,  ## Methyl paraben comment
+#     # propyl_paraben_u = URXPPB,  ## Propyl paraben (ng/ml)
+#     # propyl_paraben_u_det = URDPPBLC,  ## Propyl paraben comment
+#     # dichlorophenol_2_5_u = URX14D,  ## 2,5-dichlorophenol (ug/L)
+#     # dichlorophenol_2_5_u_det = URD14DLC,  ## 2,5-dichlorophenol comment
+#     # dichlorophenol_2_4_u = URXDCB,  ## 2,4-dichlorophenol (ug/L)
+#     # dichlorophenol_2_4_u_det = URDDCBLC,  ## 2,4-dichlorophenol comment
+#     # # creatinine_u = URXUCR,  ## Urinary creatinine (no comment for detection limit) -- two measures of this, ignoring for now
+#     
+#     # ^^ Want to add VOCs? ^^ #
+#     
+#     ## OUTCOMES
+#     
+#     thyroid_problem = MCQ160M,  ## ever told you had thyroid problem
+#     thyroid_current = MCQ170M,  ## still have thyroid problem
+#     #thyroid_age = MCQ180M       ## age at which told you had thyroid problem - shouldn't be relevant since cross-sectional?
+#     
+#     ## COVARIATES
+#     
+#     # bmi = BMXBMI,
+#     sex = RIAGENDR,
+#     age = RIDAGEYR,
+#     race = RIDRETH3     ## 1 = mex am, 2 = other hisp, 3 = non-hisp white, 4 = nh black, [no 5], 6 = nh asian, 7 = other/multi
+#     
+#   )
+# 
+# joined =
+#   full_join(
+#     join_13,
+#     join_15
+#   )
+
+#####
+## Drop NA in each variable, record sample left
+
+joined %>%                        ## n = 20,146
+  drop_na(thyroid_problem) %>%    ## n = 11,488 (8,658 under age 20 - constraint of thyroid Q)
+  drop_na(year) %>%               ## n = "
+  drop_na(id) %>%                 ## n = "
+  drop_na(bpa_u) %>%              ## n = 3,505 (7,983 missing info on BPA)
+  drop_na(bpa_u_det) %>%          ## n = "
+  drop_na(bpf_u) %>%              ## n = 3,502 (3 missing info on BPF)
+  drop_na(bpf_u_det) %>%          ## n = "
+  drop_na(bps_u) %>%              ## n = "
+  drop_na(bps_u_det) %>%          ## n = "
+  drop_na(thyroid_problem) %>%    ## n = "
+  #drop_na(thyroid_current) %>%   ## don't want to drop NAs on this - responded NA if have never had thyroid issue
+  drop_na(sex) %>%                ## n = "
+  drop_na(age) %>%                ## n = "
+  drop_na(race)  %>%              ## n = "
+  
+  ## FINAL SAMPLE - 3,502 (with above covariates in dataset -  could change if we include more/less)
+  
+  ggplot(aes(x = age)) +
+  geom_histogram(bins = 60)
+
+```
+
+```{r}
+### Distributions
+
+## exposure - BPA
+bpa =
+  data_nomiss %>% 
+  filter(bpa_u_det == 0) %>%   ## LOD = 0.14
+  arrange(bpa_u) %>% 
+  ggplot(aes(x = bpa_u)) +
+  geom_density() +
+  scale_x_log10() +
+  theme_bw() +
+  labs(x = "Urinary BPA (ng/mL)",
+       y = "Density",
+       title = "Urinary BPA Distribution\nSample (n = 3,304) from NHANES 2013-16",
+       caption = "*Sample above lower detection limit (0.14 ng/mL)") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+
+## exposure - BPS
+bps =  
+  data_nomiss %>% 
+  filter(bps_u_det == 0) %>%  ## LOD = 0.07
+  arrange(bps_u) %>% 
+  ggplot(aes(x = bps_u)) +
+  geom_density() +
+  scale_x_log10() +
+  theme_bw() +
+  labs(x = "Urinary BPS (ng/mL)",
+       y = "Density",
+       title = "Urinary BPS Distribution\nSample (n = 3,179) from NHANES 2013-16",
+       caption = "*Sample above lower detection limit (0.07 ng/mL)") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+## exposure - BPF
+bpf =  
+  data_nomiss %>% 
+  filter(bpf_u_det == 0) %>%  ## LOD = 0.14
+  arrange(bpf_u) %>% 
+  ggplot(aes(x = bpf_u)) +
+  geom_density() +
+  scale_x_log10() +
+  theme_bw() +
+  labs(x = "Urinary BPF (ng/mL)",
+       y = "Density",
+       title = "Urinary BPF Distribution\nSample (n = 1,947) from NHANES 2013-16",
+       caption = "*Sample above lower detection limit (0.14 ng/mL)") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+library(viridis)
+lod =
+  data_nomiss %>% 
+  pivot_longer(
+    matches("det$"),
+    names_to = "bisphenol",
+    values_to = "lod"
+  ) %>% 
+  select(year, bisphenol, lod) %>% 
+  mutate(
+    bisphenol = str_replace(bisphenol, "_u_det", "")
+  ) %>% 
+  mutate(
+    lod = as.factor(lod),
+    lod = fct_recode(lod, 
+                     "Above LOD" = "0",
+                     "Below LOD" = "1"),
+    year = fct_recode(year, 
+                      "2013-14" = "13_14",
+                      "2015-16" = "15_16")
+  ) %>% 
+  group_by(year, bisphenol, lod) %>% 
+  summarize(count = n()) %>% 
+  ggplot(aes(fill = lod, x = bisphenol, y = count)) +
+    geom_bar(position = "dodge", stat = "identity") +
+    theme_bw() +
+    scale_fill_brewer(palette = 5) +
+    scale_x_discrete(labels = c("bpa" = "BPA", "bpf" = "BPF", "bps" = "BPS")) +
+    facet_wrap(~year, ncol = 1) +
+    theme(legend.position = "bottom",
+          legend.title = element_blank(),
+          plot.title = element_text(hjust = 0.5)) +
+    labs(x = "",
+         y = "Observations",
+         title = "Distribution of Observations by LOD and Survey Period")
+
+library(patchwork)
+(bpa + bps) / (bpf + lod)
+    
+
+```
+
+```{r}
+## outcome
+
+data_nomiss %>% 
+  mutate(
+    thyroid = case_when(thyroid_current == 1 ~ "Yes",
+                        TRUE ~ "No"),
+    # lod = as.factor(lod),
+    # lod = fct_recode(lod, 
+    #                  "Above LOD" = "0",
+    #                  "Below LOD" = "1"),
+    year = fct_recode(year, 
+                      "2013-14" = "13_14",
+                      "2015-16" = "15_16")
+  ) %>% 
+  ggplot(aes(fill = year, x = thyroid)) +
+  geom_bar(position = "dodge", stat = "count") +
+  theme_bw() +
+  theme(legend.position = "bottom", 
+        legend.title = element_blank(),
+        plot.title = element_text(hjust = 0.5)) +
+  labs(x = "Current Thyroid Dysfunction",
+       y = "Count",
+       title = "Self-Reported Thyroid Dysfunction, by Year\nn = 3,502")
+  
+```
 
