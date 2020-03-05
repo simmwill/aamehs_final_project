@@ -532,3 +532,43 @@ data_nomiss %>%
   
 ```
 
+```{r, predictors}
+data_nomiss = data_nomiss %>% 
+  mutate(
+    thyroid = case_when(thyroid_current == 1 ~ "1",
+                        TRUE ~ "0")) 
+    data_nomiss$thyroid = as.numeric(data_nomiss$thyroid)
+
+bpa_mod <- glm(thyroid~ bpa_u, data = data_nomiss, family = "binomial")
+
+summary(bpa_mod)
+
+bps_mod <- glm(thyroid~ bps_u, data = data_nomiss, family = "binomial")
+
+summary(bps_mod)
+
+bpf_mod <- glm(thyroid~ bpf_u, data = data_nomiss, family = "binomial")
+
+summary(bpf_mod)
+
+bpa_mod <- glm(thyroid~ bpa_u, data = data_nomiss, family = "binomial")
+
+summary(bpa_mod)
+
+
+bpf =  
+  data_nomiss %>% 
+  filter(bpf_u_det == 0) %>%  ## LOD = 0.14
+  arrange(bpf_u) %>% 
+  ggplot(aes(x = bpf_u)) +
+  geom_density() +
+  scale_x_log10() +
+  theme_bw() +
+  labs(x = "Urinary BPF (ng/mL)",
+       y = "Density",
+       title = "Urinary BPF Distribution\nSample (n = 1,947) from NHANES 2013-16",
+       caption = "*Sample above lower detection limit (0.14 ng/mL)") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+```
+
