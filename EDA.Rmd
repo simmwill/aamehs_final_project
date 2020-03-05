@@ -533,42 +533,70 @@ data_nomiss %>%
 ```
 
 ```{r, predictors}
+
+library(ggplot2)
 data_nomiss = data_nomiss %>% 
   mutate(
     thyroid = case_when(thyroid_current == 1 ~ "1",
                         TRUE ~ "0")) 
     data_nomiss$thyroid = as.numeric(data_nomiss$thyroid)
+    
+#Model for bpa
 
 bpa_mod <- glm(thyroid~ bpa_u, data = data_nomiss, family = "binomial")
 
 summary(bpa_mod)
 
+#odds ratios and CI for bpa
+broom::tidy(bpa_mod) %>% 
+  filter(term != "(Intercept)") %>% 
+  transmute(odds_ratio = exp(estimate), 
+         lower = exp(estimate - 1.96*std.error), 
+         upper = exp(estimate + 1.96*std.error))
+#plot for BPA
+
+
+ggplot(data_nomiss, aes(x=bpa_u, y=thyroid)) + geom_point() + 
+  stat_smooth(method="glm", method.args=list(family="binomial"), se=FALSE)
+
+
+#Model for bpS
 bps_mod <- glm(thyroid~ bps_u, data = data_nomiss, family = "binomial")
 
 summary(bps_mod)
 
+#odds ratios and CI for bpa
+broom::tidy(bps_mod) %>% 
+  filter(term != "(Intercept)") %>% 
+  transmute(odds_ratio = exp(estimate), 
+         lower = exp(estimate - 1.96*std.error), 
+         upper = exp(estimate + 1.96*std.error))
+#plot for BPS
+
+
+ggplot(data_nomiss, aes(x=bps_u, y=thyroid)) + geom_point() + 
+  stat_smooth(method="glm", method.args=list(family="binomial"), se=FALSE)
+
+
+#Model for BPF
 bpf_mod <- glm(thyroid~ bpf_u, data = data_nomiss, family = "binomial")
 
 summary(bpf_mod)
 
-bpa_mod <- glm(thyroid~ bpa_u, data = data_nomiss, family = "binomial")
+#odds ratios and CI for bpa
+broom::tidy(bpf_mod) %>% 
+  filter(term != "(Intercept)") %>% 
+  transmute(odds_ratio = exp(estimate), 
+         lower = exp(estimate - 1.96*std.error), 
+         upper = exp(estimate + 1.96*std.error))
+#plot for BPS
 
-summary(bpa_mod)
+
+ggplot(data_nomiss, aes(x=bpf_u, y=thyroid)) + geom_point() + 
+  stat_smooth(method="glm", method.args=list(family="binomial"), se=FALSE)
 
 
-bpf =  
-  data_nomiss %>% 
-  filter(bpf_u_det == 0) %>%  ## LOD = 0.14
-  arrange(bpf_u) %>% 
-  ggplot(aes(x = bpf_u)) +
-  geom_density() +
-  scale_x_log10() +
-  theme_bw() +
-  labs(x = "Urinary BPF (ng/mL)",
-       y = "Density",
-       title = "Urinary BPF Distribution\nSample (n = 1,947) from NHANES 2013-16",
-       caption = "*Sample above lower detection limit (0.14 ng/mL)") +
-  theme(plot.title = element_text(hjust = 0.5))
+
 
 ```
 
