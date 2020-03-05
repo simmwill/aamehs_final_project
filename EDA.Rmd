@@ -556,8 +556,11 @@ broom::tidy(bpa_mod) %>%
 #plot for BPA
 
 
-ggplot(data_nomiss, aes(x=bpa_u, y=thyroid)) + geom_point() + 
-  stat_smooth(method="glm", method.args=list(family="binomial"), se=FALSE)
+bpa1 = ggplot(data_nomiss, aes(x=bpa_u, y=thyroid)) + geom_point() + 
+  stat_smooth(method="glm", method.args=list(family="binomial"), se=FALSE) +theme_bw() +
+  labs(x = "Urinary BPA (ng/mL)",
+       y = "Probability of Current Thyroid Problem",
+       title = "BPA v. Thyroid Function from NHANES 2013-16")
 
 
 #Model for bpS
@@ -573,9 +576,11 @@ broom::tidy(bps_mod) %>%
          upper = exp(estimate + 1.96*std.error))
 #plot for BPS
 
-
-ggplot(data_nomiss, aes(x=bps_u, y=thyroid)) + geom_point() + 
-  stat_smooth(method="glm", method.args=list(family="binomial"), se=FALSE)
+bps1 = ggplot(data_nomiss, aes(x=bps_u, y=thyroid)) + geom_point() + 
+  stat_smooth(method="glm", method.args=list(family="binomial"), se=FALSE) + theme_bw() +
+  labs(x = "Urinary BPS (ng/mL)",
+       y = "Probability of Current Thyroid Problem", 
+       title = "BPS v. Thyroid Function from NHANES 2013-16")
 
 
 #Model for BPF
@@ -592,11 +597,35 @@ broom::tidy(bpf_mod) %>%
 #plot for BPS
 
 
-ggplot(data_nomiss, aes(x=bpf_u, y=thyroid)) + geom_point() + 
-  stat_smooth(method="glm", method.args=list(family="binomial"), se=FALSE)
+bpf1 = ggplot(data_nomiss, aes(x=bpf_u, y=thyroid)) + geom_point() + 
+  stat_smooth(method="glm", method.args=list(family="binomial"), se=FALSE)+
+  theme_bw() +
+  labs(x = "Urinary BPF (ng/mL)",
+       y = "Probability of Current Thyroid Problem",
+       title = "BPF v. Thyroid Function from NHANES 2013-16")
+       
 
 
 
 
+(bpa1 + bps1 + bpf1)
+```
+
+```{r, LOD}
+
+data_nomiss %>% 
+  filter(bpa_u_det == "1") %>% 
+  count()
+#198
+data_nomiss %>% 
+  filter(bps_u_det == "1") %>% 
+  count()
+
+#323
+
+data_nomiss %>% 
+  filter(bpf_u_det == "1") %>% 
+  count()
+#1555
 ```
 
