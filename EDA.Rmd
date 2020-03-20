@@ -611,6 +611,45 @@ bpf1 = ggplot(data_nomiss, aes(x=bpf_u, y=thyroid)) + geom_point() +
 (bpa1 + bps1 + bpf1)
 ```
 
+Predicting probability of thyroid by level of BPA/S/F
+
+```{r}
+bpa_mod$formula
+
+bpa_predictions =
+  predict.glm(bpa_mod,
+              newdata = tibble(bpa_u = data_nomiss$bpa_u),
+              #type = "response",
+              se.fit = TRUE)
+
+bpa_predict_df = tibble(
+  x = data_nomiss$bpa_u,
+  y = bpa_predictions$fit,
+  ucl = bpa_predictions$fit + 1.96 * bpa_predictions$se.fit, 
+  lcl = bpa_predictions$fit - 1.96 * bpa_predictions$se.fit 
+)
+
+ggplot(data = bpa_predict_df, aes(x = x, y = y)) +
+  geom_line() +
+  geom_ribbon(aes(ymin = lcl,
+                  ymax = ucl),
+              alpha = 0.1)
+
+bps_mod$formula
+
+bps_predictions =
+  predict.glm(bps_mod,
+              newdata = tibble(bps_u = data_nomiss$bps_u))
+
+bpf_mod$formula
+
+bpf_predictions =
+  predict.glm(bpf_mod,
+              newdata = tibble(bpf_u = data_nomiss$bpf_u))
+
+```
+
+
 ```{r, LOD}
 
 data_nomiss %>% 
