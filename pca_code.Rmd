@@ -1,0 +1,45 @@
+---
+title: "PCA Code"
+author: "Will Simmons"
+date: "3/20/2020"
+output: html_document
+---
+
+## PCA Code - Epi Machine Learning
+
+```{r}
+install_github("vqv/ggbiplot")
+library(ggbiplot)
+```
+
+
+### Step 1: Determine if scaling is necessary
+
+```{r scale}
+#Obtain and compare means and standard deviations across features. na.rm removes the missings
+colMeans(bc.data.features, na.rm=TRUE)
+apply(bc.data.features, 2, sd, na.rm=TRUE)
+
+#some difference in means and mitoses is different than others. So decide to center and scale
+
+```
+
+### Step 2: Conduct the Principal Components Analysis
+The function prcomp() will center and scale the variables and then identify the principal components
+
+```{r pca}
+
+bc.pca<-prcomp( ~., data=bc.data.features, center=TRUE, scale=TRUE, na.action=na.omit)
+
+#Can compare sds used to scale with the sds above to ensure they are close.
+bc.pca$scale
+
+#view results of pca. Note the first three components are needed to explain at least 75% of the variance
+summary(bc.pca)
+bc.pca$rotation
+
+ggbiplot(bc.pca)
+
+ggbiplot(bc.pca, choices=c(2,3))
+
+```

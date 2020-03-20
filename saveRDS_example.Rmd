@@ -1,0 +1,38 @@
+---
+title: "saveRDS example"
+author: "Will Simmons"
+date: "3/20/2020"
+output: html_document
+---
+
+Save objects created in R using `saveRDS`
+
+```{r}
+library(tidyverse)
+library(haven)
+
+# Import data as example
+data = read_xpt('./data/DEMO_11_12.xpt')
+
+# Modify
+data_modify =
+  data %>% 
+  select(SEQN,
+         sex = RIAGENDR,
+         age = RIDAGEYR)
+
+# Export to our data folder
+saveRDS(data_modify, file = "./data/test.RDS")               # Make sure to include .RDS on end of whatever you name file
+
+```
+
+Then you can load the object from another code file by using `readRDS`
+
+```{r}
+
+import_data =
+  readRDS("./data/test.RDS")
+
+# import_data and data_modify are the same
+```
+
