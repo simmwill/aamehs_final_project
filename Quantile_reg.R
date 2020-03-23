@@ -33,10 +33,10 @@ nh1112<-merge(demo_11,med_11,by="SEQN",all=T)
 nh1112<-merge(nh1112, pc_11, by="SEQN", all=T)
 
 nh1314<-merge(demo_13,med_13,by="SEQN",all=T)
-nh1112<-merge(nh1314, pc_13, by="SEQN", all=T)
+nh1314<-merge(nh1314, pc_13, by="SEQN", all=T)
 
 nh1516<-merge(demo_15,med_15,by="SEQN",all=T)
-nh1112<-merge(nh1516, pc_15, by="SEQN", all=T)
+nh1516<-merge(nh1516, pc_15, by="SEQN", all=T)
 
 #?rq 
 
@@ -52,6 +52,13 @@ nh1112 %>%
     thyroid_problem = MCQ160M,  ## ever told you had thyroid problem
     thyroid_current = MCQ170M)
 
+
+#Data export
+
+saveRDS(nh1112, file = "./data/nh1112.RDS")   
+saveRDS(nh1314, file = "./data/nh1314.RDS") 
+saveRDS(nh1516, file = "./data/nh1516.RDS") 
+
 #Did we get any feedback about our binary outcome for quantile regression?
 
 #50% percentile -mean
@@ -59,3 +66,4 @@ Mod50 <- rq(thyroid_problem ~ bpa_u + bpf_u + PerLatinx + PerAsianAm +
               MedHInc + MedHVal + LTHS + FemaleUnemp + MaleUnemp + ClimateRegion, 
             data = df, 
             tau = 0.5)
+
