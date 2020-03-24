@@ -79,6 +79,11 @@ data_15 =
   reduce(full_join, by = "SEQN") %>% 
   mutate(year = "15_16")
 
+saveRDS(data_11, file = "./data/data_11.RDS")   
+saveRDS(data_13, file = "./data/data_13.RDS") 
+saveRDS(data_15, file = "./data/data_15.RDS") 
+
+
 ```
 
 Extracting summaries of variables
