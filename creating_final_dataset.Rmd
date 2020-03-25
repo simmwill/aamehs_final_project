@@ -1,0 +1,239 @@
+---
+title: "Creating Analytic Dataset"
+author: "Will Simmons"
+date: "3/24/2020"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r}
+library(tidyverse)
+knitr::opts_knit$set(dev.args = list(type = "cairo"))
+
+```
+
+Importing data
+
+```{r import}
+# Importing and adding year indicator to each dataset
+
+# blood VOC
+bvoc_11 = haven::read_xpt('./data/BVOC_blood_11_12.xpt')
+bvoc_13 = haven::read_xpt('./data/BVOC_blood_13_14.xpt') 
+bvoc_15 = haven::read_xpt('./data/BVOC_blood_15_16.xpt') 
+
+# urine VOC
+uvoc_11 = haven::read_xpt('./data/UVOC_urine_11_12.xpt') 
+uvoc_13 = haven::read_xpt('./data/UVOC_urine_13_14.xpt')
+uvoc_15 = haven::read_xpt('./data/UVOC_urine_15_16.xpt')
+
+# personal cosmetics etc.
+pc_11 = haven::read_xpt('./data/EPH_11_12.xpt')           ## different dataset for bisphenols 11-12
+pc_13 = haven::read_xpt('./data/EPHPP_13_14.xpt')
+pc_15 = haven::read_xpt('./data/EPHPP_15_16.xpt')
+creatinine_15 = haven::read_xpt('./data/ALB_CR_I.XPT') %>% select(SEQN, URXUCR)
+
+# demographics
+demo_11 = haven::read_xpt('./data/DEMO_11_12.xpt')
+demo_13 = haven::read_xpt('./data/DEMO_13_14.xpt')
+demo_15 = haven::read_xpt('./data/DEMO_15_16.xpt')
+
+# medical conditions
+med_11 = haven::read_xpt('./data/MCQ_11_12.xpt')
+med_13 = haven::read_xpt('./data/MCQ_13_14.xpt')
+med_15 = haven::read_xpt('./data/MCQ_15_16.xpt')
+
+# bmi 
+bmi_11 = haven::read_xpt('./data/BMX_11_12.xpt')
+bmi_13 = haven::read_xpt('./data/BMX_13_14.xpt')
+bmi_15 = haven::read_xpt('./data/BMX_15_16.xpt')
+
+## idea - THYROD_G (2011-12) could be used for sensitivity analysis (seems no clinical thyroid data after 2012)
+
+```
+
+Creating year-specific DFs
+
+```{r}
+
+data_13 =
+  list(bvoc_13, pc_13, #uvoc_13,    ## exposures
+       med_13,    ## outcomes
+       demo_13) %>%      ## covariates - removed BMI
+  reduce(full_join, by = "SEQN") %>% 
+  mutate(year = "13_14")
+
+data_15 =
+  list(bvoc_15, pc_15,   #uvoc_15,  ## exposures
+       med_15,    ## outcomes
+       demo_15) %>%      ## covariates - removed bmi
+  reduce(full_join, by = "SEQN") %>% 
+  mutate(year = "15_16")
+
+# saveRDS(data_11, file = "./data/data_11.RDS")   
+# saveRDS(data_13, file = "./data/data_13.RDS") 
+# saveRDS(data_15, file = "./data/data_15.RDS") 
+
+
+```
+
+Creating analysis dataset
+
+```{r summaries}
+
+join_13 =
+  data_13 %>% 
+  mutate(year = "13_14") %>% 
+  select(
+    year,
+    id = SEQN,    ## unique ID
+    
+    ## EXPOSURES
+    
+    bpa_u = URXBPH,   ## urinary BPA
+    bpa_u_det = URDBPHLC,   ## 1 = below lower detection limit
+    bpf_u = URXBPF,
+    bpf_u_det = URDBPFLC,
+    bps_u = URXBPS,
+    bps_u_det = URDBPSLC,
+    
+    triclocarban_u = URXTLC,  ## Urinary Triclocarban (ng/mL)
+    triclocarban_u_det = URDTLCLC,  ## Urinary Triclocarban comment
+    triclosan_u = URXTRS,  ## Urinary Triclosan (ng/mL)
+    triclosan_u_det = URDTRSLC,  ## Urinary Triclosan comment
+    butyl_paraben_u = URXBUP,  ## Butyl paraben (ng/ml)
+    butyl_paraben_u_det = URDBUPLC,  ## Butyl paraben comment
+    ethyl_paraben_u = URXEPB,  ## Ethyl paraben (ng/ml)
+    ethyl_paraben_u_det = URDEPBLC,  ## Ethyl paraben comment
+    methyl_paraben_u = URXMPB,  ## Methyl paraben (ng/ml)
+    methyl_paraben_u_det = URDMPBLC,  ## Methyl paraben comment
+    propyl_paraben_u = URXPPB,  ## Propyl paraben (ng/ml)
+    propyl_paraben_u_det = URDPPBLC,  ## Propyl paraben comment
+    dichlorophenol_2_5_u = URX14D,  ## 2,5-dichlorophenol (ug/L)
+    dichlorophenol_2_5_u_det = URD14DLC,  ## 2,5-dichlorophenol comment
+    dichlorophenol_2_4_u = URXDCB,  ## 2,4-dichlorophenol (ug/L)
+    dichlorophenol_2_4_u_det = URDDCBLC,  ## 2,4-dichlorophenol comment
+    creatinine_u = URXUCR,  ## Urinary creatinine (no comment for detection limit) -- two measures of this, ignoring for now
+    
+    # ^^ Want to add VOCs? ^^ #
+    
+    ## OUTCOMES
+    
+    thyroid_problem = MCQ160M,  ## ever told you had thyroid problem
+    thyroid_current = MCQ170M,  ## still have thyroid problem
+    #thyroid_age = MCQ180M       ## age at which told you had thyroid problem - shouldn't be relevant since cross-sectional?
+    
+    ## COVARIATES
+    
+    # bmi = BMXBMI,
+    sex = RIAGENDR,
+    age = RIDAGEYR,
+    race = RIDRETH3     ## 1 = mex am, 2 = other hisp, 3 = non-hisp white, 4 = nh black, [no 5], 6 = nh asian, 7 = other/multi
+    
+  )
+
+## phew - lots missing. look at studies to see how many they ended up including; think about potential missingness pattern.
+
+join_15 =
+  data_15 %>% 
+  mutate(year = "15_16") %>% 
+  select(
+    year,
+    id = SEQN,    ## unique ID
+    
+    ## EXPOSURES
+    
+    bpa_u = URXBPH,   ## urinary BPA
+    bpa_u_det = URDBPHLC,   ## 1 = below lower detection limit
+    bpf_u = URXBPF,
+    bpf_u_det = URDBPFLC,
+    bps_u = URXBPS,
+    bps_u_det = URDBPSLC,
+    
+    triclocarban_u = URXTLC,  ## Urinary Triclocarban (ng/mL)
+    triclocarban_u_det = URDTLCLC,  ## Urinary Triclocarban comment
+    triclosan_u = URXTRS,  ## Urinary Triclosan (ng/mL)
+    triclosan_u_det = URDTRSLC,  ## Urinary Triclosan comment
+    butyl_paraben_u = URXBUP,  ## Butyl paraben (ng/ml)
+    butyl_paraben_u_det = URDBUPLC,  ## Butyl paraben comment
+    ethyl_paraben_u = URXEPB,  ## Ethyl paraben (ng/ml)
+    ethyl_paraben_u_det = URDEPBLC,  ## Ethyl paraben comment
+    methyl_paraben_u = URXMPB,  ## Methyl paraben (ng/ml)
+    methyl_paraben_u_det = URDMPBLC,  ## Methyl paraben comment
+    propyl_paraben_u = URXPPB,  ## Propyl paraben (ng/ml)
+    propyl_paraben_u_det = URDPPBLC,  ## Propyl paraben comment
+    dichlorophenol_2_5_u = URX14D,  ## 2,5-dichlorophenol (ug/L)
+    dichlorophenol_2_5_u_det = URD14DLC,  ## 2,5-dichlorophenol comment
+    dichlorophenol_2_4_u = URXDCB,  ## 2,4-dichlorophenol (ug/L)
+    dichlorophenol_2_4_u_det = URDDCBLC,  ## 2,4-dichlorophenol comment
+    # creatinine_u = URXUCR,  ## Urinary creatinine (no comment for detection limit) -- two measures of this, ignoring for now
+    
+    # ^^ Want to add VOCs? ^^ #
+    
+    ## OUTCOMES
+    
+    thyroid_problem = MCQ160M,  ## ever told you had thyroid problem
+    thyroid_current = MCQ170M,  ## still have thyroid problem
+    #thyroid_age = MCQ180M       ## age at which told you had thyroid problem - shouldn't be relevant since cross-sectional?
+    
+    ## COVARIATES
+    
+    # bmi = BMXBMI,
+    sex = RIAGENDR,
+    age = RIDAGEYR,
+    race = RIDRETH3     ## 1 = mex am, 2 = other hisp, 3 = non-hisp white, 4 = nh black, [no 5], 6 = nh asian, 7 = other/multi
+    
+  ) %>% 
+  left_join(
+    .,
+    creatinine_15,
+    by = c("id" = "SEQN")
+  ) %>% 
+  rename(creatinine_u = URXUCR)
+  
+
+joined = 
+  full_join(
+    join_13,
+    join_15
+  ) %>% 
+  mutate(
+    thyroid_outcome = case_when((thyroid_problem == 2) | (thyroid_problem == 1 & thyroid_current == 2) ~ FALSE,
+                                (thyroid_problem == 1) & (thyroid_current == 1) ~ TRUE)#,
+                                # (is.na(thyroid_problem) ~ "NA"),
+                                # TRUE ~ "999"),
+    # thyroid_outcome = as.factor(thyroid_outcome),
+    # thyroid_outcome = fct_relabel(thyroid_outcome, c(0 = "Never or Former", 
+    #                                                  1 = "Current"))
+  ) #%>% 
+  #select(-thyroid_current, -thyroid_problem)
+
+joined_nomiss = 
+  joined %>% 
+  select(-thyroid_current, -thyroid_problem) %>% 
+  drop_na()
+
+
+```
+
+Exporting
+
+```{r}
+
+saveRDS(joined_nomiss, './data/analytic_dataset.RDS')
+
+```
+
+Testing import
+
+```{r}
+
+# Clear environment
+# rm(list = ls(all.names = TRUE))
+
+data = readRDS('./data/analytic_dataset.RDS')
+
+```
+
+
