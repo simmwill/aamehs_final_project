@@ -43,3 +43,33 @@ ggbiplot(bc.pca)
 ggbiplot(bc.pca, choices=c(2,3))
 
 ```
+
+## PCR Code - Data Science II
+
+
+We fit the PCR model using the function `pcr()`.
+
+```{r}
+library(pls)
+
+set.seed(2)
+pcr.mod <- pcr(Salary~., 
+               data = Hitters[trRows,],
+               scale = TRUE,                ## pcr - need to scale, automatically centers (glmnet - scale default)
+               validation = "CV")
+
+summary(pcr.mod)
+
+validationplot(pcr.mod, val.type="MSEP", legendpos = "topright") ## 18 components provides lowest MSEPredicted
+  ## usually focus on CV error (MSEP/RMSEP) vs. variance explained
+
+
+cv.mse <- RMSEP(pcr.mod)
+ncomp.cv <- which.min(cv.mse$val[1,,])-1   ## -1 because there is intercept as first term - gives index of what we want
+ncomp.cv
+
+predy2.pcr <- predict(pcr.mod, newdata = Hitters[-trRows,], 
+                      ncomp = ncomp.cv) ## specify optimal number of values - defined above from PCR CV MSEP
+# test MSE
+mse(y2, predy2.pcr)
+```

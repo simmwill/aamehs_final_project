@@ -7,6 +7,7 @@ editor_options:
   chunk_output_type: console
 ---
 
+# 0. Importing and checking LODs
 ```{r}
 
 library(tidyverse)
@@ -15,6 +16,90 @@ library(conflicted)
 data = readRDS('./data/analytic_dataset.RDS')
 
 ```
+
+```{r, fig.width = 13, fig.height = 8}
+library(viridis)
+lod =
+  data %>% 
+  pivot_longer(
+    matches("det$"),
+    names_to = "bisphenol",
+    values_to = "lod"
+  ) %>% 
+  select(year, bisphenol, lod) %>% 
+  mutate(
+    bisphenol = str_replace(bisphenol, "_u_det", "")
+  ) %>% 
+  mutate(
+    lod = as.factor(lod),
+    lod = fct_recode(lod, 
+                     "Above LOD" = "0",
+                     "Below LOD" = "1"),
+    year = fct_recode(year, 
+                      "2013-14" = "13_14",
+                      "2015-16" = "15_16")
+  ) %>% 
+  group_by(year, bisphenol, lod) %>% 
+  summarize(count = n()) %>% 
+  ggplot(aes(fill = lod, x = bisphenol, y = count)) +
+    geom_bar(position = "dodge", stat = "identity") +
+    theme_bw() +
+    scale_fill_brewer(palette = 5) +
+    scale_x_discrete(labels = c("bpa" = "BPA", "bpf" = "BPF", "bps" = "BPS")) +
+    facet_wrap(~year, ncol = 1) +
+    theme(legend.position = "bottom",
+          legend.title = element_blank(),
+          plot.title = element_text(hjust = 0.5)) +
+    labs(x = "",
+         y = "Observations",
+         title = "Distribution of Observations by LOD and Survey Period")
+
+lod
+
+```
+
+It looks like the following variables likely have too high of a proportion of LOD:
+
+  * BPF
+  * Butyl paraben
+  * Ethyl paraben
+  * Triclocarban
+  * Triclosan
+  
+Which leaves us with:
+
+  * BPA
+  * BPS
+  * 2,4-dichlorophenol
+  * 2,5-dichlorophenol
+  * Methyl paraben
+  * Propyl paraben
+  
+Let's look at how correlated our remaining exposures are:
+
+```{r}
+# Correlation of exposures
+data %>% 
+  select(
+    bpa_u,
+    bps_u,
+    matches("^dichl"),
+    starts_with(c("methyl", "propyl")),
+    -matches("det$")
+  ) %>% 
+  cor() %>% 
+  corrplot::corrplot(type = "lower",
+                     method = "square", 
+                     addCoef.col = "black", 
+                     diag = FALSE, 
+                     number.cex = .6,
+                     tl.col = "black",
+                     tl.cex = .9,
+                     tl.srt = 45)
+
+```
+
+Methyl and propyl paraben are highly correlated (r = 0.69), as are the two dichlorophenol measures (r = 0.97). Thus, we're essentially left with BPA, BPS, a paraben (one of methyl/propyl), and a dichlorophenol (one of 2,4- and 2,5-).
 
 # 1. Crude logistic regression models
 
@@ -64,13 +149,18 @@ covariates =
     "age",
     "race",
     "year",
-    
     "creatinine_u"
   )
   
 # Exposure set
 exposures =
-  
+  data %>% 
+  select(
+    ends_with("u"),
+    -starts_with("creatinine")
+  ) %>% 
+  names() %>% 
+  as.list() 
 
 ```
 
