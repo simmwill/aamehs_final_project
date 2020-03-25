@@ -16,16 +16,47 @@ data = readRDS('./data/analytic_dataset.RDS')
 
 ```
 
-Crude logistic regression models
+# 1. Crude logistic regression models
 
 ```{r}
-
+# Creating function to run univariable logistic regression
 uni_logistic = function(predictor) {
   
-  glm()
+  glm(reformulate(as.character(predictor),
+                  'thyroid_outcome'),
+      data = data,
+      family = 'binomial') %>% 
+  
+  broom::tidy()
   
 }
 
+# Example
+# uni_logistic("bpa_u")
 ```
 
+```{r}
+# List of predictor names to map over
+predictors =
+  data %>% 
+  select(
+    -year,
+    -id,
+    -ends_with("_det"),
+    -thyroid_outcome
+  ) %>% 
+  names() %>% 
+  as.list()
+
+# Dataframe of univariable logistic regression models
+uni_results =
+  map_dfr(predictors, uni_logistic)
+
+```
+
+# 2. Adjusted logistic regression models
+
+# 3. Crude nonlinear models
+
+# 4. Adjusted nonlinear models
 
