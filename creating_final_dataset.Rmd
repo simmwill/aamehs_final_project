@@ -127,7 +127,7 @@ join_13 =
     ## COVARIATES
     
     # bmi = BMXBMI,
-    sex = RIAGENDR,
+    sex = RIAGENDR,     ## 1 = male, 2 = female
     age = RIDAGEYR,
     race = RIDRETH3     ## 1 = mex am, 2 = other hisp, 3 = non-hisp white, 4 = nh black, [no 5], 6 = nh asian, 7 = other/multi
     
@@ -200,13 +200,27 @@ joined =
   ) %>% 
   mutate(
     thyroid_outcome = case_when((thyroid_problem == 2) | (thyroid_problem == 1 & thyroid_current == 2) ~ FALSE,
-                                (thyroid_problem == 1) & (thyroid_current == 1) ~ TRUE)#,
+                                (thyroid_problem == 1) & (thyroid_current == 1) ~ TRUE),
                                 # (is.na(thyroid_problem) ~ "NA"),
                                 # TRUE ~ "999"),
     # thyroid_outcome = as.factor(thyroid_outcome),
-    # thyroid_outcome = fct_relabel(thyroid_outcome, c(0 = "Never or Former", 
+    # thyroid_outcome = fct_relabel(thyroid_outcome, c(0 = "Never or Former",
     #                                                  1 = "Current"))
-  ) #%>% 
+    sex = as.factor(sex),
+    race = as.factor(race),
+    sex = fct_recode(sex, 'Male' = '1',
+                          'Female' = '2'),
+    race = fct_recode(race, 'Mexican American' = '1',
+                            'Other Hispanic' = '2',
+                            'Non-hisp. White' = '3',
+                            'Non-hisp. Black' = '4',
+                            # No 5
+                            'Non-hisp. Asian' = '6',
+                            'Other/Multiracial' = '7')
+  )
+
+
+  
   #select(-thyroid_current, -thyroid_problem)
 
 joined_nomiss = 
@@ -230,7 +244,7 @@ Testing import
 ```{r}
 
 # Clear environment
-# rm(list = ls(all.names = TRUE))
+rm(list = ls(all.names = TRUE))
 
 data = readRDS('./data/analytic_dataset.RDS')
 

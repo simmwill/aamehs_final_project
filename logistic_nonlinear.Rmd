@@ -36,8 +36,8 @@ uni_logistic = function(predictor) {
 ```
 
 ```{r}
-# List of predictor names to map over
-predictors =
+# List of covariate names to map over
+all_variables =
   data %>% 
   select(
     -year,
@@ -50,11 +50,30 @@ predictors =
 
 # Dataframe of univariable logistic regression models
 uni_results =
-  map_dfr(predictors, uni_logistic)
+  map_dfr(all_variables, uni_logistic)
 
 ```
 
 # 2. Adjusted logistic regression models
+
+```{r}
+# Covariate/confounder set
+covariates =
+  c(
+    "sex",
+    "age",
+    "race",
+    "year",
+    
+    "creatinine_u"
+  )
+  
+# Exposure set
+exposures =
+  
+
+```
+
 
 # 3. Crude nonlinear models
 
