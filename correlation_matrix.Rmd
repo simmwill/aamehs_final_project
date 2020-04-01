@@ -20,7 +20,7 @@ data %>%
                          colors = c("#ED6A5A", "#FFFFF9", "#36C9C6"),
                          show.diag = FALSE,
                          lab = TRUE,
-                         lab_size = 2) +
+                         lab_size = 2.5) +
                          labs(title = "Figure 1. Correlation matrix of outcome and features") +
                          theme(plot.title.position = "plot",
                                legend.position = "bottom")
