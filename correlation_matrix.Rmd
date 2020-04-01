@@ -1,0 +1,29 @@
+---
+title: "correlation_matrix"
+author: "Will Simmons"
+date: "4/1/2020"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r}
+
+library(tidyverse)
+
+data = readRDS('./data/analytic_dataset.RDS')
+
+data %>% 
+  select(-ends_with("det"), -year, -id, -race, -sex) %>% mutate(thyroid_outcome = as.numeric(thyroid_outcome)) %>% 
+  cor() %>% 
+  ggcorrplot::ggcorrplot(type = "lower",
+                         colors = c("#ED6A5A", "#FFFFF9", "#36C9C6"),
+                         show.diag = FALSE,
+                         lab = TRUE,
+                         lab_size = 2) +
+                         labs(title = "Figure 1. Correlation matrix of outcome and features") +
+                         theme(plot.title.position = "plot",
+                               legend.position = "bottom")
+
+
+```
