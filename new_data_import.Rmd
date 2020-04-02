@@ -15,14 +15,14 @@ library(haven)
 
 ```{r}
 
-thyroid_7 = read_xpt('./data/new_data/THYROD_07_08.XPT')
-thyroid_9 = read_xpt('./data/new_data/THYROD_09_10.XPT')
+thyroid_7 = read_xpt('./data/THYROD_07_08.XPT')
+thyroid_9 = read_xpt('./data/THYROD_09_10.XPT')
 
-demo_7 = read_xpt('./data/new_data/DEMO_07_08.XPT')
-demo_9 = read_xpt('./data/new_data/DEMO_09_10.XPT')
+demo_7 = read_xpt('./data/DEMO_07_08.XPT')
+demo_9 = read_xpt('./data/DEMO_09_10.XPT')
   
-eph_7 = read_xpt('./data/new_data/EPH_07_08.XPT')
-eph_9 = read_xpt('./data/new_data/EPH_09_10.XPT')
+eph_7 = read_xpt('./data/EPH_07_08.XPT')
+eph_9 = read_xpt('./data/EPH_09_10.XPT')
 
 ```
 
@@ -105,7 +105,7 @@ Saving final dataset
 
 ```{r}
 
-saveRDS(joined_nomiss, './data/new_data/new_analytic_dataset.RDS')
+saveRDS(joined_nomiss, './data/new_analytic_dataset.RDS')
 
 ```
 
