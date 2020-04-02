@@ -11,10 +11,10 @@ editor_options:
 
 library(tidyverse)
 
-data = readRDS('./data/analytic_dataset.RDS')
+data = readRDS('./data/new_data/new_analytic_dataset.RDS')
 
 data %>% 
-  select(-ends_with("det"), -year, -id, -race, -sex) %>% mutate(thyroid_outcome = as.numeric(thyroid_outcome)) %>% 
+  select(-ends_with("det"), -year, -id, -race, -sex) %>% 
   cor() %>% 
   ggcorrplot::ggcorrplot(type = "lower",
                          colors = c("#ED6A5A", "#FFFFF9", "#36C9C6"),

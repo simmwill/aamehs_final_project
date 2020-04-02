@@ -1,0 +1,111 @@
+---
+title: "New Data Import"
+author: "Will Simmons"
+date: "4/1/2020"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r}
+library(tidyverse)
+library(haven)
+```
+
+
+```{r}
+
+thyroid_7 = read_xpt('./data/new_data/THYROD_07_08.XPT')
+thyroid_9 = read_xpt('./data/new_data/THYROD_09_10.XPT')
+
+demo_7 = read_xpt('./data/new_data/DEMO_07_08.XPT')
+demo_9 = read_xpt('./data/new_data/DEMO_09_10.XPT')
+  
+eph_7 = read_xpt('./data/new_data/EPH_07_08.XPT')
+eph_9 = read_xpt('./data/new_data/EPH_09_10.XPT')
+
+```
+
+Creating year-specific DFs
+
+```{r}
+
+data_7 =
+  list(demo_7, eph_7, thyroid_7) %>%
+  reduce(full_join, by = "SEQN") %>% 
+  mutate(year = "2007-2008")
+
+data_9 =
+  list(demo_9, eph_9, thyroid_9) %>%
+  reduce(full_join, by = "SEQN") %>% 
+  mutate(year = "2009-2010")
+
+```
+
+Selecting variables from joined data
+
+```{r}
+
+joined = 
+  full_join(
+    data_7,
+    data_9
+  ) %>%  
+  select(
+    
+    # General
+    id = SEQN,
+    year,
+    
+    # From thyroid
+    thyroglobulin_antibodies = LBXATG,
+    t3_free = LBXT3F,
+    thyroxine_free = LBXT4F,
+    thyroglobulin = LBXTGN,
+    tsh = LBXTSH1,
+    peroxidase_antibodies = LBXTPO,
+    t3_total = LBXTT3,
+    thyroxine_total = LBXTT4,
+    
+    # From EPH
+    creatinine = URXUCR,
+    tert_4_octylphenol = URX4TO,
+    tert_4_octylphenol_det = URD4TOLC,
+    benzophenone_3 = URXBP3,
+    benzophenone_3_det = URDBP3LC,
+    bpa = URXBPH,
+    bpa_det = URDBPHLC,
+    triclosan = URXTRS,
+    triclosan_det = URDTRSLC,
+    butyl_paraben = URXBUP,  
+    butyl_paraben_det = URDBUPLC, 
+    ethyl_paraben = URXEPB,  
+    ethyl_paraben_det = URDEPBLC, 
+    methyl_paraben = URXMPB,
+    methyl_paraben_det = URDMPBLC,
+    propyl_paraben = URXPPB,
+    propyl_paraben_det = URDPPBLC,
+    
+    # From demographic
+    sex = RIAGENDR,
+    age = RIDAGEYR,
+    race = RIDRETH1
+  )
+
+colSums(is.na(joined))
+
+joined_nomiss =
+  joined %>% drop_na()
+  # Leaves 2,018 observations
+
+
+```
+
+Saving final dataset
+
+```{r}
+
+saveRDS(joined_nomiss, './data/new_data/new_analytic_dataset.RDS')
+
+```
+
