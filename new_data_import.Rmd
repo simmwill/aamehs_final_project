@@ -21,8 +21,16 @@ thyroid_9 = read_xpt('./data/THYROD_09_10.XPT')
 demo_7 = read_xpt('./data/DEMO_07_08.XPT')
 demo_9 = read_xpt('./data/DEMO_09_10.XPT')
   
-eph_7 = read_xpt('./data/EPH_07_08.XPT')
+eph_7 = read_xpt('./data/EPH_07_08.XPT') %>% select(-URXUCR)
 eph_9 = read_xpt('./data/EPH_09_10.XPT')
+
+bmi_7 = read_xpt('./data/BMX_07_08.XPT')
+
+cot_7 = read_xpt('./data/COTNAL_07_08.XPT')
+
+med_7 = read_xpt('./data/MCQ_07_08.XPT')
+
+preg_7 = read_xpt('./data/UCPREG_07_08.XPT')
 
 ```
 
@@ -31,7 +39,7 @@ Creating year-specific DFs
 ```{r}
 
 data_7 =
-  list(demo_7, eph_7, thyroid_7) %>%
+  list(demo_7, eph_7, thyroid_7, bmi_7, cot_7, med_7, preg_7) %>%
   reduce(full_join, by = "SEQN") %>% 
   mutate(year = "2007-2008")
 
@@ -53,6 +61,28 @@ joined =
   ) %>%  
   select(
     
+    # Covariates:
+      ## BMI
+    bmi = BMXBMI,
+      ## x Household income
+    hh_income = INDHHIN2,
+      ## x Creatinine
+      ## x Age
+      ## x Sex
+      ## x Race/ethnicity
+      ## Iodine will NOT be covariate - see Rousset, 1981 (potential mediator for methyl paraben --> thyroid function)
+      ## Cotinine? Measure of exposure to tobacco smoke - potentially confounder
+    cotinine = LBXCOT,
+    cotinine_det = LBDCOTLC,
+    creatinine = URXUCR,
+    
+    # Need exclusionary variables:
+      ## Pregnant 
+    preg = URXPREG, # if == 1, exclude
+    
+      ## History of thyroid disease
+    thy_history = MCQ160M,   # if == 1, exclude
+    
     # General
     id = SEQN,
     year,
@@ -68,7 +98,6 @@ joined =
     thyroxine_total = LBXTT4,
     
     # From EPH
-    creatinine = URXUCR,
     tert_octylphenol = URX4TO,
     tert_octylphenol_det = URD4TOLC,
     benzophenone_3 = URXBP3,
@@ -90,13 +119,43 @@ joined =
     sex = RIAGENDR,
     age = RIDAGEYR,
     race = RIDRETH1
-  )
+    
+  ) %>% 
+  
+  mutate(
+    preg = as.factor(preg),
+    thy_history = as.factor(thy_history)
+  ) %>% 
+  
+  filter(
+    # Pregnant
+    (preg != 1 | is.na(preg)),
+    # Thyroid history
+    (thy_history != 1 | is.na(thy_history)),
+    # No missing income data
+    !(hh_income %in% c(77,99)),
+  ) %>% 
+  select(
+    -preg, -thy_history
+  ) %>% 
+  mutate_at(
+    vars(c("hh_income", "sex", "race")),
+    funs(as.factor(.))
+  ) %>% 
+  mutate_at(
+    vars(ends_with("_det")),
+    funs(as.factor(.))
+  ) %>% 
+  mutate(id = as.character(id))
 
-colSums(is.na(joined))
-
-colSums(is.na(joined %>% filter(year == "2009-2010")))
-
-joined %>% filter(year == "2009-2010")
+# colSums(is.na(joined))
+# Amelia::missmap(joined)
+# # creatinine missing from all obs - in both EPH and cotinine data (used cotinine version, fewer missing)
+# eph_9 %>% select(URXUCR)
+# 
+# colSums(is.na(joined %>% filter(year == "2009-2010")))
+# 
+# joined %>% filter(year == "2009-2010")
 
 joined_nomiss =
   joined %>% drop_na()
@@ -111,6 +170,7 @@ Saving final dataset
 ```{r}
 
 saveRDS(joined_nomiss, './data/new_analytic_dataset.RDS')
+# data = readRDS('./data/new_analytic_dataset.RDS')
 
 ```
 
