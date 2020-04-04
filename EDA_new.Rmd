@@ -8,11 +8,14 @@ editor_options:
 ---
 
 ```{r}
-
 library(tidyverse)
 
-data = readRDS('./data/new_data/new_analytic_dataset.RDS')
+data = readRDS('./data/new_analytic_dataset.RDS')
+```
 
+# Correlation Matrix
+
+```{r}
 data %>% 
   select(-ends_with("det"), -year, -id, -race, -sex) %>% 
   cor() %>% 
@@ -27,3 +30,226 @@ data %>%
 
 
 ```
+
+# Distribution Function
+
+```{r}
+# Function
+density_plot = function(.data, variable, xlab, title, caption, log_x) {
+  
+  # must pipe data into this function - allows for filtering out LOD values for relevant vars
+  # filter(bpa_det == 0) %>% 
+a =
+  .data %>% 
+  arrange({{variable}}) %>% 
+  ggplot(aes(x = {{variable}})) +
+  geom_density() +
+  # scale_x_log10() +
+  theme_bw() +
+  labs(x = paste0(xlab),
+       y = "Density",
+       title = do.call("paste", c(title, sep = "\t")),
+       caption = paste0(caption)
+  ) +
+  theme(plot.title = element_text(hjust = 0.5))  
+  
+  if (log_x == TRUE) {
+    
+    a + scale_x_log10()
+    
+  } else {
+    
+    a
+    
+  }
+  
+}
+```
+
+# Urinary Assay Distributions
+
+```{r}
+### Creating density plots with function above
+
+# BPA
+data %>% 
+  filter(bpa_det == 0) %>% 
+  density_plot(variable = bpa,
+               xlab = "Urinary BPA (ng/mL)",
+               title = list("Urinary BPA Distribution\nSample (n = ", nrow(data), ") from NHANES 2007-8"),
+               caption = "*Sample above lower detection limit (0.2 ng/mL)",
+               log_x = TRUE)
+
+# 4-tert-octylphenol
+data %>% 
+  filter(tert_octylphenol_det == 0) %>% 
+  density_plot(variable = tert_octylphenol,
+               xlab = "Urinary 4-tert-4-octylphenol (ng/mL)",
+               title = list("Urinary 4-tert-octylphenol Distribution\nSample (n = ", nrow(data), ") from NHANES 2007-8"),
+               caption = "*Sample above lower detection limit (0.2 ng/mL)",
+               log_x = TRUE)
+
+# Benzophenone-3
+data %>% 
+  filter(benzophenone_3_det == 0) %>% 
+  density_plot(variable = benzophenone_3,
+               xlab = "Benzophenone-3 (ng/mL)",
+               title = list("Urinary Benzophenone-3 Distribution\nSample (n = ", nrow(data), ") from NHANES 2007-8"),
+               caption = "*Sample above lower detection limit (0.4 ng/mL)",
+               log_x = TRUE)
+
+# Triclosan
+data %>% 
+  filter(triclosan_det == 0) %>% 
+  density_plot(variable = triclosan,
+               xlab = "Urinary Triclosan (ng/mL)",
+               title = list("Urinary Triclosan Distribution\nSample (n = ", nrow(data), ") from NHANES 2007-8"),
+               caption = "*Sample above lower detection limit (2.3 ng/mL)",
+               log_x = TRUE)
+
+# Methyl Paraben
+data %>% 
+  filter(methyl_paraben_det == 0) %>% 
+  density_plot(variable = methyl_paraben,
+               xlab = "Urinary Methyl Paraben (ng/mL)",
+               title = list("Urinary Methyl Paraben Distribution\nSample (n = ", nrow(data), ") from NHANES 2007-8"),
+               caption = "*Sample above lower detection limit (1 ng/mL)",
+               log_x = TRUE)
+
+# Ethyl Paraben
+data %>% 
+  filter(ethyl_paraben_det == 0) %>% 
+  density_plot(variable = ethyl_paraben,
+               xlab = "Urinary Ethyl Paraben (ng/mL)",
+               title = list("Urinary Ethyl Paraben Distribution\nSample (n = ", nrow(data), ") from NHANES 2007-8"),
+               caption = "*Sample above lower detection limit (1 ng/mL)",
+               log_x = TRUE)
+
+# Propyl Paraben
+data %>% 
+  filter(propyl_paraben_det == 0) %>% 
+  density_plot(variable = propyl_paraben,
+               xlab = "Urinary Propyl Paraben (ng/mL)",
+               title = list("Urinary Propyl Paraben Distribution\nSample (n = ", nrow(data), ") from NHANES 2007-8"),
+               caption = "*Sample above lower detection limit (0.2 ng/mL)",
+               log_x = TRUE)
+
+# Butyl Paraben
+data %>% 
+  filter(butyl_paraben_det == 0) %>% 
+  density_plot(variable = butyl_paraben,
+               xlab = "Urinary Butyl Paraben (ng/mL)",
+               title = list("Urinary Butyl Paraben Distribution\nSample (n = ", nrow(data), ") from NHANES 2007-8"),
+               caption = "*Sample above lower detection limit (0.2 ng/mL)",
+               log_x = TRUE)
+
+
+# Creatinine
+data %>% 
+  density_plot(variable = creatinine,
+               xlab = "Urinary creatinine (unitless)",
+               title = list("Urinary Creatinine Distribution\nSample (n = ", nrow(data), ") from NHANES 2007-8"),
+               caption = NULL,
+               log_x = TRUE)
+
+
+```
+
+# Percent Over/Under LOD - Exposures
+
+```{r}
+  
+  data %>% 
+  pivot_longer(
+    matches("det$"),
+    names_to = "exposure",
+    values_to = "lod"
+  ) %>% 
+  select(exposure, lod) %>% 
+  mutate(
+    exposure = str_replace(exposure, "_det", "")
+  ) %>% 
+  mutate(
+    lod = as.factor(lod),
+    lod = fct_recode(lod, 
+                     "Above LOD" = "0",
+                     "Below LOD" = "1")
+  ) %>% 
+  group_by(exposure, lod) %>% 
+  summarize(count = n(),
+            prev = n()/nrow(data)
+  ) %>% 
+  ggplot(aes(x = exposure, y = prev, fill = lod)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(x = "Exposure",
+       y = "Proportion",
+       title = "Proportion Above/Below LOD by Exposure",
+       subtitle = "NHANES 2007-8") +
+  theme_bw() +
+  theme(legend.position = "bottom",
+        legend.title = element_blank(),
+        plot.title = element_text(hjust = 0.5),
+        plot.subtitle = element_text(hjust = 0.5)
+  ) +
+  scale_fill_brewer(palette = 3)
+
+```
+
+# Scatterplots
+
+```{r}
+
+scatter = function(predictor_string, outcome_string, log_x, log_y, smooth) {
+  
+  a = 
+    ggplot(data = data,
+           aes_string(x = predictor_string,
+                      y = outcome_string)) +
+    geom_point(alpha = 0.4, color = 'DarkGray')
+  
+  if (log_x == TRUE) {
+    
+    b = a + scale_x_log10()
+    
+  } else {
+    
+    b = a
+    
+  }
+  
+  if (log_y == TRUE) {
+    
+    c = b + scale_y_log10()
+    
+  } else {
+    
+    c = b
+    
+  }
+  
+  if (smooth == TRUE) {
+    
+    c + geom_smooth(method = "gam", 
+                    se = FALSE,
+                    color = 'IndianRed')
+    
+  } else {
+    
+    c
+    
+  }
+    
+  
+}
+
+Cairo::CairoWin()
+
+scatter(predictor_string = 'bpa',
+        outcome_string = 'peroxidase_antibodies',
+        log_x = TRUE,
+        log_y = TRUE,
+        smooth = TRUE)
+
+
+```
+

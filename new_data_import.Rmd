@@ -69,8 +69,8 @@ joined =
     
     # From EPH
     creatinine = URXUCR,
-    tert_4_octylphenol = URX4TO,
-    tert_4_octylphenol_det = URD4TOLC,
+    tert_octylphenol = URX4TO,
+    tert_octylphenol_det = URD4TOLC,
     benzophenone_3 = URXBP3,
     benzophenone_3_det = URDBP3LC,
     bpa = URXBPH,
@@ -94,9 +94,14 @@ joined =
 
 colSums(is.na(joined))
 
+colSums(is.na(joined %>% filter(year == "2009-2010")))
+
+joined %>% filter(year == "2009-2010")
+
 joined_nomiss =
   joined %>% drop_na()
   # Leaves 2,018 observations
+  # Ugh all from 2007-2008, since no one in 2009-2010 had both phenols and thyroid measures
 
 
 ```
