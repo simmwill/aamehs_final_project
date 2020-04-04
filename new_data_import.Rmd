@@ -158,9 +158,22 @@ joined =
 # joined %>% filter(year == "2009-2010")
 
 joined_nomiss =
-  joined %>% drop_na()
+  joined %>% drop_na() %>% 
   # Leaves 2,018 observations
   # Ugh all from 2007-2008, since no one in 2009-2010 had both phenols and thyroid measures
+  
+  # Adjusting for creatinine
+  mutate(
+    tert_octylphenol_creatinine = tert_octylphenol/(creatinine*10),
+    benzophenone_3_creatinine = benzophenone_3/(creatinine*10),
+    bpa_creatinine = bpa/(creatinine*10),
+    triclosan_creatinine = triclosan/(creatinine*10),
+    butyl_paraben_creatinine = butyl_paraben/(creatinine*10),
+    ethyl_paraben_creatinine = ethyl_paraben/(creatinine*10),
+    methyl_paraben_creatinine = methyl_paraben/(creatinine*10),
+    propyl_paraben_creatinine = propyl_paraben/(creatinine*10)
+    
+  )
 
 
 ```
