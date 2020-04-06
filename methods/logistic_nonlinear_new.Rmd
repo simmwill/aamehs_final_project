@@ -1,0 +1,206 @@
+---
+title: "Logistic + Nonlinear Analysis [Updated April 2020]"
+author: "Will Simmons"
+date: "04/06/2020"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+# 0. Importing and checking LODs
+```{r}
+
+library(tidyverse)
+library(conflicted)
+
+new_data = readRDS('./data/new_analytic_dataset.RDS')
+
+```
+
+# 1. Scatterplots (code from EDA_new.Rmd)
+
+```{r}
+
+scatter = function(predictor_string, outcome_string, log_x, log_y, smooth) {
+  
+  a = 
+    ggplot(data = new_data,
+           aes_string(x = predictor_string,
+                      y = outcome_string)) +
+    geom_point(alpha = 0.4, color = 'DarkGray')
+  
+  if (log_x == TRUE) {
+    
+    b = a + scale_x_log10()
+    
+  } else {
+    
+    b = a
+    
+  }
+  
+  if (log_y == TRUE) {
+    
+    c = b + scale_y_log10()
+    
+  } else {
+    
+    c = b
+    
+  }
+  
+  if (smooth == TRUE) {
+    
+    c + geom_smooth(#method = "gam", 
+                    se = FALSE,
+                    color = 'IndianRed')
+    
+  } else {
+    
+    c
+    
+  }
+    
+  
+}
+
+# Cairo::CairoWin()
+
+# # Test
+# scatter(predictor_string = 'bpa_creatinine',
+#         outcome_string = 'peroxidase_antibodies',
+#         log_x = TRUE,
+#         log_y = TRUE,
+#         smooth = TRUE)
+
+
+```
+
+## List of predictors, outcomes for grid of scatters
+
+```{r}
+
+exposure_list_creatinine =
+  new_data %>% 
+  select(ends_with("_creatinine")) %>% 
+  names() %>% 
+  as_tibble() %>% 
+  rename(predictor_string = value) %>% 
+  mutate(predictor_string = as.character(predictor_string))
+
+log_exposure_list_creatinine =
+  exposure_list_creatinine %>% 
+  as_tibble() %>% 
+  mutate(
+    predictor_string = paste0("log(", predictor_string, ")")
+  )
+
+outcome_list =
+  new_data %>% 
+  select(8:15) %>% 
+  names() %>% 
+  as_tibble() %>% 
+  rename(outcome_string = value) %>% 
+  mutate(outcome_string = as.character(outcome_string))
+  # cols 8-15
+
+scatter_grid =
+  expand_grid(
+    exposure_list_creatinine,
+    # log_exposure_list_creatinine,
+    outcome_string = "tsh",
+    log_x = FALSE, # Looking at linear right now for OLS - want linear scales
+    log_y = FALSE, # Looking at linear right now for OLS - want linear scales
+    smooth = TRUE
+  )
+
+```
+
+## Map over list
+
+```{r}
+
+scatter_plots =
+  pmap(scatter_grid, scatter)
+
+cowplot::plot_grid(plotlist = scatter_plots,
+                   ncol = 4)
+
+```
+
+# 1. Crude linear regression (OLS) models
+
+```{r}
+# Creating function to run univariable linear regression
+uni_ols = function(predictor) {
+  
+   lm(reformulate(as.character(predictor),
+                  'tsh'),
+      data = new_data) %>% 
+    
+  # log-transformed X  
+    
+  # lm(reformulate(paste0("log(", predictor, ")"),
+  #                       'tsh'),
+  #    data = new_data) %>% 
+  
+  broom::tidy()
+  
+}
+
+# Example
+# uni_ols("triclosan_creatinine") 
+# uni_ols("tert_octylphenol_creatinine")
+
+```
+
+## 1a. All univariable linear models
+
+```{r}
+
+exposures =
+  exposure_list_creatinine %>% 
+  as.list() %>% unlist()
+
+crude_ols_models =
+  map_dfr(exposures, uni_ols)
+
+```
+
+## 1b. All adjusted linear models
+
+```{r}
+
+# Covariate/confounder set
+covariate_list =
+  c("sex",
+    "age",
+    "race",
+    "bmi",
+    "hh_income",
+    "cotinine"
+  )
+
+adj_ols = function(predictor) {
+  
+  covariates = covariate_list
+  
+  lm(reformulate(c(as.character(predictor), covariates),
+                  'tsh'),
+      data = new_data) 
+  
+}
+
+# Example
+# adj_ols('bpa_creatinine', covariate_list)
+
+# Map over all
+adj_ols_models =
+  map(exposures, adj_ols)
+
+```
+
+# 3. Crude nonlinear models
+
+# 4. Adjusted nonlinear models
+

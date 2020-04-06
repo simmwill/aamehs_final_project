@@ -18,6 +18,7 @@ data = readRDS('./data/new_analytic_dataset.RDS')
 ```{r}
 data %>% 
   select(-ends_with("det"), -year, -id, -race, -sex) %>% 
+  mutate(hh_income = as.numeric(hh_income)) %>% 
   cor() %>% 
   ggcorrplot::ggcorrplot(type = "lower",
                          colors = c("#ED6A5A", "#FFFFF9", "#36C9C6"),
@@ -152,6 +153,14 @@ data %>%
                caption = NULL,
                log_x = TRUE)
 
+# TSH
+data %>% 
+  density_plot(variable = tsh,
+               xlab = "Urinary TSH (uIU/mL)",
+               title = list("Urinary TSH Distribution\nSample (n = ", nrow(data), ") from NHANES 2007-8"),
+               caption = NULL,
+               log_x = TRUE)
+
 
 ```
 
@@ -242,14 +251,60 @@ scatter = function(predictor_string, outcome_string, log_x, log_y, smooth) {
   
 }
 
-Cairo::CairoWin()
+# Cairo::CairoWin()
 
-scatter(predictor_string = 'bpa',
-        outcome_string = 'peroxidase_antibodies',
-        log_x = TRUE,
-        log_y = TRUE,
-        smooth = TRUE)
+# # Test
+# scatter(predictor_string = 'bpa_creatinine',
+#         outcome_string = 'peroxidase_antibodies',
+#         log_x = TRUE,
+#         log_y = TRUE,
+#         smooth = TRUE)
 
+
+```
+
+## List of predictors, outcomes for grid of scatters
+
+```{r}
+
+exposure_list_creatinine =
+  data %>% 
+  select(ends_with("_creatinine")) %>% 
+  names() %>% 
+  as_tibble() %>% 
+  rename(predictor_string = value) %>% 
+  mutate(predictor_string = as.character(predictor_string))
+
+outcome_list =
+  data %>% 
+  select(8:15) %>% 
+  names() %>% 
+  as_tibble() %>% 
+  rename(outcome_string = value) %>% 
+  mutate(outcome_string = as.character(outcome_string))
+  # cols 8-15
+
+scatter_grid =
+  expand_grid(
+    exposure_list_creatinine,
+    outcome_string = "tsh",
+    # outcome_string = c("t3_free", "tsh"),
+    log_x = TRUE,
+    log_y = FALSE,
+    smooth = TRUE
+  )
+
+```
+
+## Map over list
+
+```{r}
+
+scatter_plots =
+  pmap(scatter_grid, scatter)
+
+cowplot::plot_grid(plotlist = scatter_plots,
+                   ncol = 4)
 
 ```
 
