@@ -11,6 +11,9 @@ editor_options:
 ```{r}
 
 library(tidyverse)
+library(cowplot)
+library(patchwork)
+library(viridis)
 library(conflicted)
 
 new_data = readRDS('./data/new_analytic_dataset.RDS')
@@ -92,7 +95,7 @@ log_exposure_list_creatinine =
   exposure_list_creatinine %>% 
   as_tibble() %>% 
   mutate(
-    predictor_string = paste0("log(", predictor_string, ")")
+    predictor_string = paste0("log10(", predictor_string, ")")
   )
 
 outcome_list =
@@ -111,6 +114,16 @@ scatter_grid =
     outcome_string = "tsh",
     log_x = FALSE, # Looking at linear right now for OLS - want linear scales
     log_y = FALSE, # Looking at linear right now for OLS - want linear scales
+    smooth = FALSE
+  )
+
+scatter_grid_log =
+  expand_grid(
+    # exposure_list_creatinine,
+    log_exposure_list_creatinine,
+    outcome_string = "tsh",
+    log_x = FALSE, 
+    log_y = FALSE, 
     smooth = TRUE
   )
 
@@ -123,9 +136,11 @@ scatter_grid =
 scatter_plots =
   pmap(scatter_grid, scatter)
 
-cowplot::plot_grid(plotlist = scatter_plots,
-                   ncol = 4)
-
+scatter_plot_grid =
+  cowplot::plot_grid(plotlist = scatter_plots,
+                     ncol = 4) +
+  labs(title = "Scatterplots of non-transformed exposures vs. creatinine-adjusted urinary TSH levels") 
+  
 ```
 
 # 1. Crude linear regression (OLS) models
@@ -136,15 +151,15 @@ uni_ols = function(predictor) {
   
    lm(reformulate(as.character(predictor),
                   'tsh'),
-      data = new_data) %>% 
+      data = new_data)
     
   # log-transformed X  
     
   # lm(reformulate(paste0("log(", predictor, ")"),
-  #                       'tsh'),
-  #    data = new_data) %>% 
+  #                       'log(tsh)'),
+  #    data = new_data)
   
-  broom::tidy()
+  # broom::tidy()
   
 }
 
@@ -163,7 +178,7 @@ exposures =
   as.list() %>% unlist()
 
 crude_ols_models =
-  map_dfr(exposures, uni_ols)
+  map(exposures, uni_ols)
 
 ```
 
@@ -192,13 +207,161 @@ adj_ols = function(predictor) {
 }
 
 # Example
-# adj_ols('bpa_creatinine', covariate_list)
+# adj_ols('bpa_creatinine')
 
 # Map over all
 adj_ols_models =
   map(exposures, adj_ols)
 
 ```
+
+# 2. Consider log transforming predictor values?
+
+```{r}
+
+# Log10 distributions of predictors
+new_data %>% 
+  select(ends_with("creatinine")) %>% 
+  mutate_all(funs(log10(.))) %>% 
+  summary()
+# All would be interpretable for 1-unit log increase as 10-fold increase (most IQRs are ~1 log10 unit)
+
+```
+
+## Log10 scatters
+
+```{r}
+
+scatter_plots_log_exposure =
+  pmap(scatter_grid_log, scatter)
+
+scatter_plot_log_grid =
+  cowplot::plot_grid(plotlist = scatter_plots_log_exposure,
+                     ncol = 4) +
+    labs(title = "Scatterplots of log10-transformed exposures vs. creatinine-adjusted urinary TSH levels") 
+
+```
+
+## Log10-transformed predictor models
+
+```{r}
+
+# Creating function to run univariable linear regression
+uni_ols_logx = function(predictor) {
+    
+  # log10-transformed X
+
+  lm(reformulate(paste0("log10(", predictor, ")"),
+                        'tsh'),
+     data = new_data)
+  
+  # broom::tidy()
+  
+}
+
+# Example
+# uni_ols_logx("triclosan_creatinine") %>% broom::tidy()
+# uni_ols_logx("tert_octylphenol_creatinine") %>% broom::tidy()
+# uni_ols_logx("bpa_creatinine") %>% broom::tidy()
+# uni_ols_logx("benzophenone_3_creatinine") %>% broom::tidy()
+
+```
+
+### List of crude log10 models
+
+```{r}
+
+crude_ols_models_logx =
+  map(exposures, uni_ols_logx)
+
+```
+
+## Adj log10 models
+
+```{r}
+
+# Covariate/confounder set
+covariate_list =
+  c("sex",
+    "age",
+    "race",
+    "bmi",
+    "hh_income",
+    "cotinine"
+  )
+
+adj_ols_logx = function(predictor) {
+  
+  covariates = covariate_list
+  
+  lm(reformulate(c(paste0("log10(", predictor, ")"), covariates),
+                  'tsh'),
+      data = new_data) 
+  
+}
+
+# Example
+# adj_ols_logx("bpa_creatinine") %>% broom::tidy()
+
+```
+
+### List of adjusted log10 models
+
+```{r}
+
+adj_ols_models_logx =
+  map(exposures, adj_ols_logx)
+
+```
+
+### Model including all predictors
+
+```{r}
+
+log_exposures = 
+  exposure_list_creatinine %>% 
+  mutate(
+    predictor_string = paste0("log10(",
+                              predictor_string,
+                              ")")
+  ) %>% as.list() %>% unlist()
+
+full_model =
+  lm(formula = reformulate(c(log_exposures, covariate_list), "tsh"),
+     data = new_data)
+
+# Formula written out:
+# tsh ~ log10(tert_octylphenol_creatinine) + log10(benzophenone_3_creatinine) + 
+#     log10(bpa_creatinine) + log10(triclosan_creatinine) + log10(butyl_paraben_creatinine) + 
+#     log10(ethyl_paraben_creatinine) + log10(methyl_paraben_creatinine) + 
+#     log10(propyl_paraben_creatinine) + sex + age + race + bmi + 
+#     hh_income + cotinine
+
+```
+
+### New corrplot for logged exposures
+
+```{r}
+
+new_data %>% 
+  select(tsh, ends_with("_creatinine"), covariate_list, -race) %>% 
+  mutate(hh_income = as.numeric(hh_income), sex = as.numeric(sex)) %>%
+  mutate_at(., vars(ends_with("_creatinine")), funs(log10(.))) %>% 
+  rename_at(., vars(ends_with("_creatinine")), funs(paste0("log_", .))) %>% 
+
+  cor() %>%
+  ggcorrplot::ggcorrplot(type = "lower",
+                         colors = c("#ED6A5A", "#FFFFF9", "#36C9C6"),
+                         show.diag = FALSE,
+                         lab = TRUE,
+                         lab_size = 2.5) +
+                         labs(title = "Figure 1. Correlation matrix of outcome and log-10 transformed exposures") +
+                         theme(plot.title.position = "plot",
+                               legend.position = "bottom")
+
+```
+
+
 
 # 3. Crude nonlinear models
 
