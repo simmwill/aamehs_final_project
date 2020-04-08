@@ -2,25 +2,31 @@
 title: "Logistic + Nonlinear Analysis [Updated April 2020]"
 author: "Will Simmons"
 date: "04/06/2020"
-output: html_document
+output: 
+  html_document:
+    code_folding: hide
 editor_options: 
   chunk_output_type: console
 ---
 
-# 0. Importing and checking LODs
+#### 0. Importing and checking LODs
 ```{r}
+shh = suppressMessages
 
-library(tidyverse)
-library(cowplot)
-library(patchwork)
-library(viridis)
-library(conflicted)
+shh(library(tidyverse))
+shh(library(cowplot))
+shh(library(patchwork))
+shh(library(viridis))
+shh(library(conflicted))
 
-new_data = readRDS('./data/new_analytic_dataset.RDS')
+new_data = readRDS('../data/new_analytic_dataset.RDS')
+
+knitr::opts_chunk$set(warning = FALSE, message = FALSE)
+options(width = 1000)
 
 ```
 
-# 1. Scatterplots (code from EDA_new.Rmd)
+#### 1. Scatterplots (code from EDA_new.Rmd)
 
 ```{r}
 
@@ -30,7 +36,8 @@ scatter = function(predictor_string, outcome_string, log_x, log_y, smooth) {
     ggplot(data = new_data,
            aes_string(x = predictor_string,
                       y = outcome_string)) +
-    geom_point(alpha = 0.4, color = 'DarkGray')
+    geom_point(alpha = 0.6, color = 'IndianRed') +
+    theme_bw()
   
   if (log_x == TRUE) {
     
@@ -79,7 +86,7 @@ scatter = function(predictor_string, outcome_string, log_x, log_y, smooth) {
 
 ```
 
-## List of predictors, outcomes for grid of scatters
+##### List of predictors, outcomes for grid of scatters
 
 ```{r}
 
@@ -124,12 +131,12 @@ scatter_grid_log =
     outcome_string = "tsh",
     log_x = FALSE, 
     log_y = FALSE, 
-    smooth = TRUE
+    smooth = FALSE
   )
 
 ```
 
-## Map over list
+##### Map over list
 
 ```{r}
 
@@ -138,12 +145,17 @@ scatter_plots =
 
 scatter_plot_grid =
   cowplot::plot_grid(plotlist = scatter_plots,
-                     ncol = 4) +
+                     ncol = 4) %>% wrap_elements() +
   labs(title = "Scatterplots of non-transformed exposures vs. creatinine-adjusted urinary TSH levels") 
   
 ```
 
-# 1. Crude linear regression (OLS) models
+```{r, fig.width = 16, fig.height = 7}
+scatter_plot_grid
+```
+
+
+#### 2. Crude linear regression (OLS) models
 
 ```{r}
 # Creating function to run univariable linear regression
@@ -169,7 +181,7 @@ uni_ols = function(predictor) {
 
 ```
 
-## 1a. All univariable linear models
+##### 2a. All univariable linear models
 
 ```{r}
 
@@ -182,7 +194,7 @@ crude_ols_models =
 
 ```
 
-## 1b. All adjusted linear models
+##### 2b. All adjusted linear models
 
 ```{r}
 
@@ -215,20 +227,20 @@ adj_ols_models =
 
 ```
 
-# 2. Consider log transforming predictor values?
+#### 3. Consider log transforming predictor values?
 
-```{r}
+```{r, fig.width = 8}
 
 # Log10 distributions of predictors
 new_data %>% 
-  select(ends_with("creatinine")) %>% 
+  select(ends_with("_creatinine")) %>% 
   mutate_all(funs(log10(.))) %>% 
-  summary()
+  summary() %>% knitr::kable() %>% kableExtra::kable_styling()
 # All would be interpretable for 1-unit log increase as 10-fold increase (most IQRs are ~1 log10 unit)
 
 ```
 
-## Log10 scatters
+##### Log10 scatters
 
 ```{r}
 
@@ -237,12 +249,17 @@ scatter_plots_log_exposure =
 
 scatter_plot_log_grid =
   cowplot::plot_grid(plotlist = scatter_plots_log_exposure,
-                     ncol = 4) +
+                     ncol = 4) %>% wrap_elements() +
     labs(title = "Scatterplots of log10-transformed exposures vs. creatinine-adjusted urinary TSH levels") 
 
 ```
 
-## Log10-transformed predictor models
+```{r, fig.width = 16, fig.height = 7}
+scatter_plot_log_grid
+```
+
+
+##### Log10-transformed predictor models
 
 ```{r}
 
@@ -267,7 +284,7 @@ uni_ols_logx = function(predictor) {
 
 ```
 
-### List of crude log10 models
+###### List of crude log10 models
 
 ```{r}
 
@@ -276,7 +293,7 @@ crude_ols_models_logx =
 
 ```
 
-## Adj log10 models
+##### Adj log10 models
 
 ```{r}
 
@@ -305,7 +322,7 @@ adj_ols_logx = function(predictor) {
 
 ```
 
-### List of adjusted log10 models
+###### List of adjusted log10 models
 
 ```{r}
 
@@ -314,7 +331,7 @@ adj_ols_models_logx =
 
 ```
 
-### Model including all predictors
+###### Model including all predictors
 
 ```{r}
 
@@ -339,16 +356,17 @@ full_model =
 
 ```
 
-### New corrplot for logged exposures
+###### New corrplot for logged exposures
 
-```{r}
-
-new_data %>% 
+```{r, fig.width = 8, fig.height = 7}
+log_new_data = 
+  new_data %>% 
   select(tsh, ends_with("_creatinine"), covariate_list, -race) %>% 
   mutate(hh_income = as.numeric(hh_income), sex = as.numeric(sex)) %>%
   mutate_at(., vars(ends_with("_creatinine")), funs(log10(.))) %>% 
-  rename_at(., vars(ends_with("_creatinine")), funs(paste0("log_", .))) %>% 
+  rename_at(., vars(ends_with("_creatinine")), funs(paste0("log_", .)))  
 
+log_new_data %>% 
   cor() %>%
   ggcorrplot::ggcorrplot(type = "lower",
                          colors = c("#ED6A5A", "#FFFFF9", "#36C9C6"),
@@ -359,11 +377,25 @@ new_data %>%
                          theme(plot.title.position = "plot",
                                legend.position = "bottom")
 
+# Looks like most variables are uncorrelated, except parabens with each other and parabens with sex
 ```
 
 
+```{r, fig.width = 8}
+# interesting - parabens much higher among females, e.g. propyl paraben belows
+log_new_data %>% 
+  mutate(sex = case_when(sex == 1 ~ "Male",
+                         sex == 2 ~ "Female"),
+         sex = as.factor(sex)) %>% 
+  ggplot(aes(x = sex, y = log_propyl_paraben_creatinine, fill = sex)) + geom_violin() +
+  labs(title = "Interesting finding - parabens higher in women than men",
+       caption = "Implications for stratified analyses?") +
+  theme_bw() +
+  theme(legend.position = "none")
 
-# 3. Crude nonlinear models
+```
 
-# 4. Adjusted nonlinear models
+#### 4. Crude nonlinear models
+
+#### 5. Adjusted nonlinear models
 

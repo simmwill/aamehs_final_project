@@ -7,6 +7,38 @@ editor_options:
   chunk_output_type: console
 ---
 
+FINAL DATASET
+
+  OUTCOME
+    * tsh
+    
+    + Outcome is not logged
+
+  PREDICTORS ******** still determining whether these need to be logged *******
+    * tert_octylphenol_creatinine
+    * benzophenone_3_creatinine
+    * bpa_creatinine
+    * triclosan_creatinine
+    * butyl_paraben_creatinine
+    * ethyl_paraben_creatinine
+    * methyl_paraben_creatinine
+    * propyl_paraben_creatinine
+    
+    + All predictors transformed as follows:
+      * Divided by individual creatinine value
+      * Transformed via log10?                          
+  
+  COVARIATES
+    * bmi (?) (Marianthi: could be mediator, check on this)
+    * sex (1 = male, 2 = female)
+    * age (continuous)
+    * race (see NHANES for categories)
+    * cotinine (marker of tobacco smoke exposure)
+    * hh_income (household income, 15 categories - see NHANES)
+    
+    + For specific categories, etc. look at NHANES site for variable name (e.g. variable name for hh_income is actually INDHHIN2 - see code below where this is renamed from the original NHANES data)
+  
+
 ```{r}
 library(tidyverse)
 library(haven)

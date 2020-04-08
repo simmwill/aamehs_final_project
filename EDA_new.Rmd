@@ -15,7 +15,7 @@ data = readRDS('./data/new_analytic_dataset.RDS')
 
 # Correlation Matrix
 
-```{r}
+```{r, fig.width = 12, fig.height = 12}
 data %>% 
   select(-ends_with("det"), -year, -id, -race, -sex) %>% 
   mutate(hh_income = as.numeric(hh_income)) %>% 
