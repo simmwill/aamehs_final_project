@@ -91,7 +91,8 @@ ggplot(loadings.long.8PC, aes(x = expo, y = Loading)) +
   facet_wrap(. ~ PC) +                       # creates a distinct box for each PC 
   theme_bw() +                             # sets theme options
   theme(strip.background = element_rect(fill = "white")) +
-  labs(x = expression("PM"[2.5]~"expos"),
+  labs(x = expression("Chemical expos"),
        y = "Loadings") + 
   scale_color_manual(values = Color.list) +
-  scale_fill_manual(values = Color.list) 
+  scale_fill_manual(values = Color.list) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
