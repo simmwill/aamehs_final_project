@@ -20,14 +20,14 @@ head(df)
 
 
 #BMI categories
-df =df %>% 
-  mutate(cdc_bmi = if_else(bmi <18.50, "0", 
-                    if_else(bmi > 18.50 & bmi <=24.9, "1",
-                    if_else(bmi > 24.9 & bmi <=29.9, "2", 
-                    if_else(bmi > 29.9, "3", "NA")))))
-df$cdc_bmi = as.factor(df$cdc_bmi)
+#df =df %>% 
+#  mutate(cdc_bmi = if_else(bmi <18.50, "0", 
+#                   if_else(bmi > 18.50 & bmi <=24.9, "1",
+#                    if_else(bmi > 24.9 & bmi <=29.9, "2", 
+#                    if_else(bmi > 29.9, "3", "NA")))))
+#df$cdc_bmi = as.factor(df$cdc_bmi)
 
-head(df)
+#head(df)
 
 
 
@@ -36,20 +36,20 @@ head(df)
 ## a - BPA #####
 
 #50% percentile -mean
-Mod50 <- rq(tsh ~ bpa + bmi + hh_income  + sex + 
-            age + race + bpa_creatinine, 
+Mod50 <- rq(tsh ~ bpa_creatinine + bmi + hh_income  + sex + 
+            age + race + cotinine, 
             data = df, 
             tau = 0.5)
 summary(Mod50, alpha = 0.05, se = "boot")
 
 #can i use bmi as a continuous var?
 
-Mods25.50 <- rq(tsh ~ bpa + bmi+ hh_income + sex + age + 
-                  race + bpa_creatinine, 
+Mods25.50 <- rq(tsh ~ bpa_creatinine + bmi+ hh_income + sex + age + 
+                  race + cotinine, 
                   data = df, 
                   tau= c(0.25, 0.50)) # c() creates a vector
 
-summary(Mods25.50, alpha= 0.05, se = "boot")
+summary(Mods25.50)
 
 # Plot two quantile models 
 
@@ -104,8 +104,8 @@ ForestPlot.25.50
 TauList <- seq(0.1, 0.9, by = 0.1)
 TauList
 
-qr.Mods  <- rq(tsh ~ bpa + bmi + hh_income + sex + age + 
-                race + bpa_creatinine, 
+qr.Mods  <- rq(tsh ~ bpa_creatinine + bmi + hh_income + sex + age + 
+                race + cotinine, 
                 data = df, 
                 tau = TauList)
 
@@ -155,7 +155,7 @@ ForestPlot.Mods
 ## B- PHENOLS ######
 
 names(df)
-
+# tert_octylphenol_creatinine
   
 Mod50 <- rq(tsh ~ bpa + bmi + hh_income  + sex + 
               age + race + bpa_creatinine, 
