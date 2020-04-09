@@ -9,6 +9,12 @@ editor_options:
   chunk_output_type: console
 ---
 
+DECISION: go with log-log model to help with heteroskedasticity
+  * Use log-log exposure/outcome in:
+    + Linear/nonlinear methods
+    + Quantile regression
+    + Log-X values in estimating principal components
+
 #### 0. Importing and checking LODs
 ```{r}
 shh = suppressMessages
@@ -19,7 +25,7 @@ shh(library(patchwork))
 shh(library(viridis))
 shh(library(conflicted))
 
-new_data = readRDS('../data/new_analytic_dataset.RDS')
+new_data = readRDS('./data/new_analytic_dataset.RDS')
 
 knitr::opts_chunk$set(warning = FALSE, message = FALSE)
 options(width = 1000)
@@ -212,6 +218,8 @@ adj_ols = function(predictor) {
   
   covariates = covariate_list
   
+  # new_data[-c(1627,5,1157, # high TSH
+  #           681,199,97),] %>% 
   lm(reformulate(c(as.character(predictor), covariates),
                   'tsh'),
       data = new_data) 
@@ -226,6 +234,53 @@ adj_ols_models =
   map(exposures, adj_ols)
 
 ```
+
+##### Diagnostic plots
+
+We can see from diagnostic plots that the error variance is non-constant (i.e. there is evidence of heteroskedasticity). Therefore, we may want to try to transform our data to avoid violation of this OLS assumption.
+
+```{r}
+library(patchwork)
+
+diagnosis = function(model) {
+  
+  plot(model, which = 2)
+  plot(model, which = 3)
+  
+}
+
+# # Example
+# diagnosis(adj_ols_models[[8]])
+# Can't map this...
+
+par(mfrow = c(1,2))
+for (i in 1:8) {
+  diagnosis(adj_ols_models[[i]])
+  title(paste0("Diagnosis plots for exposure ", exposures[[i]]))
+}
+par(mfrow = c(1,1))
+
+# outliers: 1627, 5, 1157
+# new_data[c(1627,5,1157),]
+```
+
+##### Diagnostic plots with transformed predictor data
+
+```{r}
+
+adj_ols_models_loglog = readRDS('./adj_ols_models_loglog.RDS')
+
+par(mfrow = c(1,2))
+for (i in 1:8) {
+  diagnosis(adj_ols_models_loglog[[i]])
+  title(paste0("Diagnostic plots for log ", exposures[[i]]), ", log TSH")
+}
+par(mfrow = c(1,1))
+
+# outliers: 681, 97, 199
+# new_data[c(681,97,199),]
+```
+
 
 #### 3. Consider log transforming predictor values?
 
@@ -302,18 +357,22 @@ covariate_list =
   c("sex",
     "age",
     "race",
-    "bmi",
+    # "bmi",
     "hh_income",
     "cotinine"
   )
 
-adj_ols_logx = function(predictor) {
+adj_ols_loglog = function(predictor) {
   
   covariates = covariate_list
   
+  # new_data[-c(1627,5,1157, # high TSH
+  #             681,199,97),] %>% 
   lm(reformulate(c(paste0("log10(", predictor, ")"), covariates),
-                  'tsh'),
-      data = new_data) 
+                  'log10(tsh)'),
+      data = new_data) %>% 
+    
+    broom::tidy()
   
 }
 
@@ -326,8 +385,11 @@ adj_ols_logx = function(predictor) {
 
 ```{r}
 
-adj_ols_models_logx =
-  map(exposures, adj_ols_logx)
+adj_ols_models_loglog =
+  map_dfr(exposures, adj_ols_loglog)
+
+# saveRDS(adj_ols_models_loglog, './adj_ols_models_loglog.RDS')
+# To use object above
 
 ```
 
@@ -397,5 +459,63 @@ log_new_data %>%
 
 #### 4. Crude nonlinear models
 
+```{r}
+library(mgcv)
+
+crude_nonlinear = function(predictor) {
+  
+  gam(reformulate(paste0("s(", predictor, ")"),
+                  "tsh"),
+      data = new_data) # %>% 
+  
+  # broom::tidy()
+  
+}
+
+# Example
+# crude_nonlinear("triclosan_creatinine")
+
+crude_nonlinear_models = 
+  map(exposures, crude_nonlinear)
+
+gam.check(crude_nonlinear_models[[1]])
+
+```
+
+
 #### 5. Adjusted nonlinear models
+
+```{r}
+
+# Covariate/confounder set
+covariate_list =
+  c("sex",
+    "age",
+    "race",
+    "bmi",
+    "hh_income",
+    "cotinine"
+  )
+
+adj_nonlinear = function(predictor) {
+  
+  covariates = covariate_list
+  
+  gam(reformulate(c(paste0("s(", predictor, ")"), covariates),
+                  "tsh"),
+      data = new_data) # %>% 
+  
+  # broom::tidy()
+  
+}
+
+# Example
+# adj_nonlinear("triclosan_creatinine")
+
+adj_nonlinear_models = 
+  map(exposures, adj_nonlinear)
+
+gam.check(adj_nonlinear_models[[9]])
+
+```
 

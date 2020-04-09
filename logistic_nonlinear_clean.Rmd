@@ -1,0 +1,33 @@
+---
+title: "CLEAN Logistic + Nonlinear Analysis [Updated April 2020]"
+author: "Will Simmons"
+date: "04/06/2020"
+output: 
+  html_document:
+    code_folding: hide
+editor_options: 
+  chunk_output_type: console
+---
+
+# Justification of log-log - (1) example diagnostic plot
+
+After evaluating model residuals (full diagnostic analyses not shown), we decided to log-transform both our exposure chemicals and our outcome, TSH (log-log transformation). We found that this resolved issues of heteroskedasticity and provided reasonable interpretability. For an example of diagnostic plots before and after log-log transformation, see below.
+
+[plot - before]
+[plot - after]
+
+# Crude log-log OLS (8) - table of results
+
+First, we fit eight unadjusted linear regression models, one for each of our eight exposure chemicals of interest. The outcome, TSH, remained constant across models. Both exposure and outcome were log-transformed.
+
+[table of crude results]
+
+# Adjusted log-log OLS (8) - table of results
+
+# Adjusted nonlinear (8) - table of results
+
+# Plots:
+
+  ## If all OLS, forest plots of effect estimates for eight adjusted models
+  
+  ## If any nonlinearities, plots of nonlinear function (predicted values?)
