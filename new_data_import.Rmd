@@ -10,23 +10,23 @@ editor_options:
 FINAL DATASET
 
   OUTCOME
-    * tsh
+    * log(tsh)
     
-    + Outcome is not logged
+    + Outcome is (natural / base e) logged
 
-  PREDICTORS ******** still determining whether these need to be logged *******
-    * tert_octylphenol_creatinine
-    * benzophenone_3_creatinine
-    * bpa_creatinine
-    * triclosan_creatinine
-    * butyl_paraben_creatinine
-    * ethyl_paraben_creatinine
-    * methyl_paraben_creatinine
-    * propyl_paraben_creatinine
+  PREDICTORS 
+    * log(tert_octylphenol_creatinine)
+    * log(benzophenone_3_creatinine)
+    * log(bpa_creatinine)
+    * log(triclosan_creatinine)
+    * log(butyl_paraben_creatinine)
+    * log(ethyl_paraben_creatinine)
+    * log(methyl_paraben_creatinine)
+    * log(propyl_paraben_creatinine)
     
     + All predictors transformed as follows:
       * Divided by individual creatinine value
-      * Transformed via log10?                          
+      * Transformed via (natural/base e) log transformation                         
   
   COVARIATES
     * bmi (?) (Marianthi: could be mediator, check on this)
@@ -196,6 +196,7 @@ joined_nomiss =
   
   # Adjusting for creatinine
   mutate(
+    
     tert_octylphenol_creatinine = tert_octylphenol/(creatinine*10),
     benzophenone_3_creatinine = benzophenone_3/(creatinine*10),
     bpa_creatinine = bpa/(creatinine*10),
@@ -204,6 +205,24 @@ joined_nomiss =
     ethyl_paraben_creatinine = ethyl_paraben/(creatinine*10),
     methyl_paraben_creatinine = methyl_paraben/(creatinine*10),
     propyl_paraben_creatinine = propyl_paraben/(creatinine*10)
+    
+  ) %>% 
+  
+  # logged values
+  mutate(
+    
+    # Exposures
+    log_tert_octylphenol_creatinine = log(tert_octylphenol_creatinine),
+    log_benzophenone_3_creatinine = log(benzophenone_3_creatinine),
+    log_bpa_creatinine = log(bpa_creatinine),
+    log_triclosan_creatinine = log(triclosan_creatinine),
+    log_butyl_paraben_creatinine = log(butyl_paraben_creatinine),
+    log_ethyl_paraben_creatinine = log(ethyl_paraben_creatinine),
+    log_methyl_paraben_creatinine = log(methyl_paraben_creatinine),
+    log_propyl_paraben_creatinine = log(propyl_paraben_creatinine),
+    
+    # Outcome
+    log_tsh = log(tsh)
     
   )
 
