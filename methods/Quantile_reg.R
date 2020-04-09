@@ -36,13 +36,62 @@ head(df)
 ## a - BPA #####
 
 #50% percentile -mean
-Mod50 <- rq(tsh ~ bpa_creatinine + bmi + hh_income  + sex + 
+Mod50 <- rq(tsh ~ bpa_creatinine  + hh_income  + sex + 
             age + race + cotinine, 
             data = df, 
             tau = 0.5)
 summary(Mod50, alpha = 0.05, se = "boot")
 
-#can i use bmi as a continuous var?
+# 2c Compare to model for mean aveBMI
+
+# 2c.i Fit mean model
+ModMean <- lm(tsh ~ bpa_creatinine + PerBlack + PerLatinx + PerAsianAm + 
+                MedHInc + MedHVal + LTHS + FemaleUnemp + MaleUnemp + ClimateRegion, 
+              data = df)
+
+# 2c.ii Extract coefficients from models
+
+CoeffMod50   <- summary(Mod50, alpha = 0.05)$coefficients[,1]
+CoeffModMean <- summary(ModMean)$coefficients[,1]
+coeff.table0  <- data.frame(CoeffMod50, CoeffModMean)
+
+# 2c.iii Make table more readable
+
+coeff.table <- coeff.table0 %>% 
+  #compute percentage difference
+  mutate(PercentDiff = 100*(CoeffMod50 - CoeffModMean)/CoeffModMean) %>% 
+  # round numbers 
+  mutate(CoeffMod50   = round(CoeffMod50, 3), 
+         CoeffModMean = round(CoeffModMean, 3),
+         PercentDiff   = round(PercentDiff, 1))
+
+coeff.table
+
+# Class Question #************************************
+# Are the models similar? 
+#**********************
+
+
+# 2d Compare models with plots 
+# for these plots, we will use ggplot2 
+
+
+# 2d.i Combine estimates from each model into a single dataframe 
+# assemble estimates from each Model
+# note that the code here is different for the rq model and the lm Model 
+# since the summary.rq() directly outputs confidence intervals 
+# and summary.lm outputs standard errors.
+
+# FYI, the : notation calls for each element between 1 and 3.
+# including 1 and 3
+# and c() makes a vector out of those three elements
+
+MedianModel <- c(summary(Mod50, alpha = 0.05)$coefficients[2,1:3])
+
+coeff.lm    <- summary(ModMean)$coefficients
+MeanModel <- c(coeff.lm[2,1], 
+               coeff.lm[2,1] - 1.96 * coeff.lm[2,2], 
+               coeff.lm[2,1] + 1.96 * coeff.lm[2,2])
 
 Mods25.50 <- rq(tsh ~ bpa_creatinine + bmi+ hh_income + sex + age + 
                   race + cotinine, 
@@ -152,10 +201,31 @@ ForestPlot.Mods <- ggplot(data=coeff.table, # defines what dataset we are using
 
 ForestPlot.Mods
 
-## B- PHENOLS ######
+## B- data wrangling ######
 
 names(df)
 # tert_octylphenol_creatinine
+
+exposure_list_creatinine =
+  df %>% 
+  select(ends_with("_creatinine")) %>% 
+  names() %>% 
+  tibble::enframe(name = NULL) %>% 
+  rename(predictor_string = value) %>% 
+  mutate(predictor_string = as.character(predictor_string))
+
+
+# sums 
+
+
+
+
+
+
+
+## 
+
+	
   
 Mod50 <- rq(tsh ~ bpa + bmi + hh_income  + sex + 
               age + race + bpa_creatinine, 
