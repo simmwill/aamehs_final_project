@@ -1,5 +1,5 @@
 ##########################
-*  QUANTILE REG NEW *
+### *  QUANTILE REG NEW *
 #########################
 
 ####************************************
@@ -36,7 +36,13 @@ Mod50 <- rq(log_tsh ~ log_bpa_creatinine + hh_income + sex + age +
               race, 
             data = df, 
             tau = 0.5)
-summary(Mod50, alpha = 0.05, se= "boot")
+summary(Mod50, alpha = 0.05, se ="boot")
+
+coeff.qr50    <- summary(Mod50)$coefficients
+Mod50.qr <- c(coeff.qr50[2,1], 
+               coeff.qr50[2,1] - 1.96 * coeff.qr50[2,2], 
+               coeff.qr50[2,1] + 1.96 * coeff.qr50[2,2])
+
 
 ####*********************
 #### 3: Mean Model ####
@@ -50,6 +56,8 @@ summary (ModMean)
 
 
 CoeffMod50   <- summary(Mod50, alpha = 0.05)$coefficients[,1]
+
+
 CoeffModMean <- summary(ModMean)$coefficients[,1]
 coeff.table0  <- data.frame(CoeffMod50, CoeffModMean)
 
@@ -122,7 +130,7 @@ Mods25.50 <- rq(log_tsh ~ log_bpa_creatinine + hh_income + sex + age +
 
 summary(Mods25.50)
 
-summary25.50 <- summary(Mods25.50, alpha = 0.05, se = "boot")
+summary25.50 <- summary(Mods25.50, alpha = 0.05, se = "BLB")
 
 Model25th   <- c(summary25.50[[1]]$coefficients[2,1:3])
 Model50th   <- c(summary25.50[[2]]$coefficients[2,1:3])
@@ -166,7 +174,7 @@ qr.Mods  <- rq(log_tsh ~ log_bpa_creatinine + hh_income + age + sex +
 
 # 3c.ii Assemble estimates from each model
 
-summary.qr.Mods <- summary(qr.Mods, alpha = 0.05, se= "boot")
+summary.qr.Mods <- summary(qr.Mods, alpha = 0.05, se= "BLB")
 
 Model10th   <- c(summary.qr.Mods[[1]]$coefficients[2,1:3])
 Model20th   <- c(summary.qr.Mods[[2]]$coefficients[2,1:3])
@@ -210,7 +218,7 @@ ForestPlot.Mods <- ggplot(data=coeff.table, # defines what dataset we are using
 
 ForestPlot.Mods
 
-
+#------------------------------------------------------------------------------------------------------------
 ##*********
 ## log_tert_octylphenol_creatinine
 
