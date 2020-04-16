@@ -39,89 +39,15 @@ Mod50 <- rq(log_tsh ~ log_bpa_creatinine + hh_income + sex + age +
 summary(Mod50, alpha = 0.05, se ="boot")
 
 coeff.qr50    <- summary(Mod50)$coefficients
+
 Mod50.qr <- c(coeff.qr50[2,1], 
                coeff.qr50[2,1] - 1.96 * coeff.qr50[2,2], 
                coeff.qr50[2,1] + 1.96 * coeff.qr50[2,2])
 
 
-####*********************
-#### 3: Mean Model ####
-####*********************
-
-ModMean <- lm(log_tsh ~ log_bpa_creatinine + hh_income + sex + age + 
-                race, 
-              data = df)
-
-summary (ModMean)
-
-
-CoeffMod50   <- summary(Mod50, alpha = 0.05)$coefficients[,1]
-
-
-CoeffModMean <- summary(ModMean)$coefficients[,1]
-coeff.table0  <- data.frame(CoeffMod50, CoeffModMean)
-
-coeff.table <- coeff.table0 %>% 
-  #compute percentage difference
-  mutate(PercentDiff = 100*(CoeffMod50 - CoeffModMean)/CoeffModMean) %>% 
-  # round numbers 
-  mutate(CoeffMod50   = round(CoeffMod50, 3), 
-         CoeffModMean = round(CoeffModMean, 3),
-         PercentDiff   = round(PercentDiff, 1))
-
-coeff.table
-
-
-MedianModel <- c(summary(Mod50, alpha = 0.05)$coefficients[2,1:3])
-
-coeff.lm    <- summary(ModMean)$coefficients
-MeanModel <- c(coeff.lm[2,1], 
-               coeff.lm[2,1] - 1.96 * coeff.lm[2,2], 
-               coeff.lm[2,1] + 1.96 * coeff.lm[2,2])
-
-# create dataframe  
-
-coeff.table <- rbind(MedianModel, MeanModel)
-coeff.table <- as.data.frame(coeff.table, stringsAsFactors = FALSE)
-
-# set names for dataframe
-
-names(coeff.table) <- c("coeff", "lci", "uci")
-coeff.table        <- coeff.table %>% 
-  mutate(ModelName = c("Median Model", "Mean Model"))
-
-# 2d.ii Forest plot
-# with ggplot, we can keep our plot in the environment
-# as a gpglot object 
-# and then display it in the plot panel 
-# by entering the plot's name
-
-
-ForestPlotMeanMedian <- ggplot(data = coeff.table, 
-                               # defines what dataset ggplot will use    
-                               # aes() defines which variables the geoms will use   
-                               aes( # defines variable for the x axis
-                                 x = ModelName,  
-                                 # defines the variable for the point along the y axis
-                                 y = coeff,      
-                                 # defines the lower bound of the confidence interval
-                                 ymin = lci,     
-                                 # define the upper bound of the confidence interval 
-                                 ymax = uci)) +  
-  # creates a point (y) with line defined by ymin and ymax
-  geom_pointrange() +   
-  # creates lines with bars, i.e. here the CIs
-  geom_errorbar()+      
-  # add a dashed line at y=0
-  geom_hline(aes(yintercept = 0.0), lty = 2) +
-  # labels for axes
-  xlab("Model Name") +    
-  ylab(expression("Coefficient for BPA (95% CI)"))
-
-ForestPlotMeanMedian # produces the plot in the plots panel
 
 ####*******************************************
-#### 3: Compare QR at Different Quantiles  ####
+#### 2: Compare QR at Different Quantiles  ####
 ####*******************************************
 
 Mods25.50 <- rq(log_tsh ~ log_bpa_creatinine + hh_income + sex + age + 
@@ -130,7 +56,7 @@ Mods25.50 <- rq(log_tsh ~ log_bpa_creatinine + hh_income + sex + age +
 
 summary(Mods25.50)
 
-summary25.50 <- summary(Mods25.50, alpha = 0.05, se = "BLB")
+summary25.50 <- summary(Mods25.50, alpha = 0.05, se = "boot")
 
 Model25th   <- c(summary25.50[[1]]$coefficients[2,1:3])
 Model50th   <- c(summary25.50[[2]]$coefficients[2,1:3])
@@ -173,8 +99,9 @@ qr.Mods  <- rq(log_tsh ~ log_bpa_creatinine + hh_income + age + sex +
                tau = TauList)
 
 # 3c.ii Assemble estimates from each model
+summary(df$tsh)
 
-summary.qr.Mods <- summary(qr.Mods, alpha = 0.05, se= "BLB")
+summary.qr.Mods <- summary(qr.Mods, alpha = 0.05)
 
 Model10th   <- c(summary.qr.Mods[[1]]$coefficients[2,1:3])
 Model20th   <- c(summary.qr.Mods[[2]]$coefficients[2,1:3])
@@ -194,11 +121,19 @@ coeff.table <- rbind(Model10th, Model20th, Model30th, Model40th,
                      Model90th)
 
 coeff.table <- as.data.frame(coeff.table, stringsAsFactors = FALSE)
+names(coeff.table) <- c("coeff", "Std.Error", " t.value")
+
+
+
+coeff.table$lci = coeff.table$coeff - 1.96 * coeff.table$Std.Error
+coeff.table$uci = coeff.table$coeff + 1.96 * coeff.table$Std.Error
+
+
 
 # set names for dataframe
 
-names(coeff.table) <- c("coeff", "lci", "uci")
-coeff.table        <- coeff.table %>% 
+
+coeff.table        <- coeff.table %>% as.data.frame () %>% 
   mutate(ModelName = c("Model 10th", "Model 20th", "Model 30th", "Model 40th",
                        "Model 50th", "Model 60th", "Model 70th", "Model 80th", 
                        "Model 90th"))
