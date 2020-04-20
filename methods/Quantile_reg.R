@@ -29,23 +29,110 @@ head(df)
 
 #head(df)
 
-
-
 ## **quant regs*####
 
 ## a - BPA #####
 
 #50% percentile -mean
-Mod50 <- rq(tsh ~ bpa_creatinine + bmi + hh_income  + sex + 
-            age + race + cotinine, 
+Mod50 <- rq(log_tsh ~ log_bpa_creatinine  + hh_income  + sex + 
+            age + race , 
             data = df, 
             tau = 0.5)
-summary(Mod50, alpha = 0.05, se = "boot")
+summary(Mod50, alpha = 0.05, se = "iid")
 
-#can i use bmi as a continuous var?
+# 2c Compare to model for mean aveBMI
 
-Mods25.50 <- rq(tsh ~ bpa_creatinine + bmi+ hh_income + sex + age + 
-                  race + cotinine, 
+# 2c.i Fit mean model
+ModMean <- lm(tsh ~ log_bpa_creatinine + hh_income + sex + age + 
+                race, 
+              data = df)
+
+# 2c.ii Extract coefficients from models
+
+CoeffMod50   <- summary(Mod50, alpha = 0.05)$coefficients[,1]
+CoeffModMean <- summary(ModMean)$coefficients[,1]
+coeff.table0  <- data.frame(CoeffMod50, CoeffModMean)
+
+# 2c.iii Make table more readable
+
+coeff.table <- coeff.table0 %>% 
+  #compute percentage difference
+  mutate(PercentDiff = 100*(CoeffMod50 - CoeffModMean)/CoeffModMean) %>% 
+  # round numbers 
+  mutate(CoeffMod50   = round(CoeffMod50, 3), 
+         CoeffModMean = round(CoeffModMean, 3),
+         PercentDiff   = round(PercentDiff, 1))
+
+coeff.table
+
+
+
+# FYI, the : notation calls for each element between 1 and 3.
+# including 1 and 3
+# and c() makes a vector out of those three elements
+
+MedianModel <- c(summary(Mod50, alpha = 0.05, se= "iid")$coefficients[2,1:3])
+
+coeff.lm    <- summary(ModMean)$coefficients
+MeanModel <- c(coeff.lm[2,1], 
+               coeff.lm[2,1] - 1.96 * coeff.lm[2,2], 
+               coeff.lm[2,1] + 1.96 * coeff.lm[2,2])
+
+# create dataframe 
+
+coeff.table <- rbind(MedianModel, MeanModel)
+coeff.table <- as.data.frame(coeff.table, stringsAsFactors = FALSE)
+
+
+# set names for dataframe
+
+names(coeff.table) <- c("coeff", "lci", "uci")
+coeff.table        <- coeff.table %>% 
+  mutate(ModelName = c("Median Model", "Mean Model"))
+
+# 2d.ii Forest plot
+# with ggplot, we can keep our plot in the environment
+# as a gpglot object 
+# and then display it in the plot panel 
+# by entering the plot's name
+
+
+ForestPlotMeanMedian <- ggplot(data = coeff.table, 
+                               # defines what dataset ggplot will use    
+                               # aes() defines which variables the geoms will use   
+                               aes( # defines variable for the x axis
+                                 x = ModelName,  
+                                 # defines the variable for the point along the y axis
+                                 y = coeff,      
+                                 # defines the lower bound of the confidence interval
+                                 ymin = lci,     
+                                 # define the upper bound of the confidence interval 
+                                 ymax = uci)) +  
+  # creates a point (y) with line defined by ymin and ymax
+  geom_pointrange() +   
+  # creates lines with bars, i.e. here the CIs
+  geom_errorbar()+      
+  # add a dashed line at y=0
+  geom_hline(aes(yintercept = 0.0), lty = 2) +
+  # labels for axes
+  xlab("Model Name") +    
+  ylab(expression("Coefficient for PM"[2.5]~" (95% CI)"))
+
+ForestPlotMeanMedian # produces the plot in the plots panel
+
+####*******************************************
+#### 3: Compare QR at Different Quantiles  ####
+####*******************************************
+
+# often, we are interested in how associations vary for different quantiles 
+
+# 3a Two tau's 
+# the quantreg package incldues a way to estimate 
+# Models for multiple tau's at once 
+# we create a vector of the tau's
+
+Mods25.50 <- rq(tsh ~ log_bpa_creatinine + hh_income + sex + age + 
+                  race , 
                   data = df, 
                   tau= c(0.25, 0.50)) # c() creates a vector
 
@@ -59,7 +146,7 @@ summary(Mods25.50)
 # we will save the summary as an object 
 # so we do not have to keep re-summarizing the models. 
 
-summary25.50 <- summary(Mods25.50, alpha = 0.05, se = "boot")
+summary25.50 <- summary(Mods25.50, alpha = 0.05, se = "iid")
 
 # we use the brackets to specify which model we are extracting
 
@@ -104,14 +191,14 @@ ForestPlot.25.50
 TauList <- seq(0.1, 0.9, by = 0.1)
 TauList
 
-qr.Mods  <- rq(tsh ~ bpa_creatinine + bmi + hh_income + sex + age + 
-                race + cotinine, 
+qr.Mods  <- rq(tsh ~ log_bpa_creatinine  + hh_income + sex + age + 
+                race, 
                 data = df, 
                 tau = TauList)
 
 # 3c.ii Assemble estimates from each model
 
-summary.qr.Mods <- summary(qr.Mods, alpha = 0.05, se = "boot")
+summary.qr.Mods <- summary(qr.Mods, alpha = 0.05, se = "iid")
 
 Model10th   <- c(summary.qr.Mods[[1]]$coefficients[2,1:3])
 Model20th   <- c(summary.qr.Mods[[2]]$coefficients[2,1:3])
@@ -146,16 +233,38 @@ ForestPlot.Mods <- ggplot(data=coeff.table, # defines what dataset we are using
                               ymax=uci)) +  # define the upper bound of the confidence interval   
   geom_pointrange() +               # creates a point (y) with line defined by ymin and ymax        
   geom_errorbar()+                  # creates lines with bars
-  geom_hline(aes(yintercept=0.0), lty=2) + # add a dashed line at y=0 
+  geom_hline(aes(yintercept=0.0), lty=0) + # add a dashed line at y=0 
   xlab("Model Name") +              # labels for axes
-  ylab(expression("Coefficient for BPA (95% CI)"))
+  ylab(expression("Coefficient for BPA (95% CI)")) 
+
 
 ForestPlot.Mods
 
-## B- PHENOLS ######
+## B- data wrangling ######
 
 names(df)
 # tert_octylphenol_creatinine
+
+exposure_list_creatinine =
+  df %>% 
+  select(ends_with("_creatinine")) %>% 
+  names() %>% 
+  tibble::enframe(name = NULL) %>% 
+  rename(predictor_string = value) %>% 
+  mutate(predictor_string = as.character(predictor_string))
+
+
+# sums 
+
+
+
+
+
+
+
+## 
+
+	
   
 Mod50 <- rq(tsh ~ bpa + bmi + hh_income  + sex + 
               age + race + bpa_creatinine, 
