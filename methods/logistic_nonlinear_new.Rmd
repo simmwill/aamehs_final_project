@@ -209,8 +209,8 @@ covariate_list =
   c("sex",
     "age",
     "race",
-    "bmi",
-    "hh_income",
+    # "bmi",
+    # "hh_income",
     "cotinine"
   )
 
@@ -256,9 +256,12 @@ diagnosis = function(model) {
 par(mfrow = c(1,2))
 for (i in 1:8) {
   diagnosis(adj_ols_models[[i]])
-  title(paste0("Diagnosis plots for exposure ", exposures[[i]]))
+  # title(paste0("Diagnosis plots for exposure ", exposures[[i]]))
 }
 par(mfrow = c(1,1))
+
+plot(adj_ols_models[[1]], which = 2)
+title("Exposure: creatinine-adjusted 4-tert-octylphenol; Outcome: serum TSH")
 
 # outliers: 1627, 5, 1157
 # new_data[c(1627,5,1157),]

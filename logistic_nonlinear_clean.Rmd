@@ -9,25 +9,272 @@ editor_options:
   chunk_output_type: console
 ---
 
+<!-- Setup -->
+
+```{r}
+
+shh = suppressMessages
+
+shh(library(tidyverse))
+shh(library(cowplot))
+shh(library(patchwork))
+shh(library(viridis))
+shh(library(conflicted))
+
+new_data = readRDS('./data/new_analytic_dataset.RDS')
+
+knitr::opts_chunk$set(warning = FALSE, message = FALSE, echo = FALSE)
+options(width = 1000)
+
+```
+
+<!-- Models -->
+
+<!-- Exposure lists -->
+```{r}
+
+# Exposure list
+log_exposure_list_creatinine =
+  new_data %>% 
+  select(starts_with("log_") & ends_with("_creatinine")) %>% 
+  names() %>% 
+  as_tibble() %>% 
+  rename(predictor_string = value) %>% 
+  mutate(predictor_string = as.character(predictor_string))
+
+# Exposures as character vector
+exposures =
+  log_exposure_list_creatinine %>% 
+  as.list() %>% unlist()
+
+# Covariate/confounder set
+covariate_list =
+  c("sex",
+    "age",
+    "race",
+    "hh_income"
+  )
+
+```
+
+<!-- Crude linear models -->
+```{r}
+
+uni_ols = function(predictor) {
+  
+   lm(reformulate(as.character(predictor),
+                  'log(tsh)'),
+      data = new_data)
+    
+}
+
+crude_ols_models = 
+  map(exposures, uni_ols)
+
+```
+
+
+<!-- Adjusted linear models -->
+```{r}
+
+adj_ols = function(predictor) {
+  
+  covariates = covariate_list
+  
+  lm(reformulate(c(as.character(predictor), covariates),
+                  'log(tsh)'),
+     data = new_data) 
+  
+}
+
+# Example
+# adj_ols('bpa_creatinine')
+
+# Map over all
+adj_ols_models =
+  map(exposures, adj_ols)
+
+```
+
+
 # Justification of log-log - (1) example diagnostic plot
 
 After evaluating model residuals (full diagnostic analyses not shown), we decided to log-transform both our exposure chemicals and our outcome, TSH (log-log transformation). We found that this resolved issues of heteroskedasticity and provided reasonable interpretability. For an example of diagnostic plots before and after log-log transformation, see below.
 
-[plot - before]
-[plot - after]
+<!-- Diagnostic plots -->
+```{r}
+
+# Without log-log: example
+# see ./figures/non_logged_qq.png
+
+# With log-log: example
+plot(adj_ols_models[[1]], which = 2)
+title("Exposure: log creatinine-adjusted 4-tert-octylphenol; Outcome: log serum TSH")
+# also see ./figures/log_qq.png
+
+```
+
+# Correlation matrix
+
+<!-- Correlation matrix -->
+```{r}
+
+new_data %>% #[exposures] %>% view()
+  select(log_tsh, unname(exposures), sex, age, hh_income) %>% 
+  mutate(hh_income = as.numeric(hh_income),
+         sex = as.numeric(sex)) %>% 
+  cor() %>% 
+  ggcorrplot::ggcorrplot(type = "lower",
+                         colors = c("#ED6A5A", "#FFFFF9", "#36C9C6"),
+                         show.diag = FALSE,
+                         lab = TRUE,
+                         lab_size = 4) +
+                         labs(title = "Figure 1. Correlation matrix of outcome and features") +
+                         theme(plot.title.position = "plot",
+                               legend.position = "bottom")
+
+```
+
 
 # Crude log-log OLS (8) - table of results
 
-First, we fit eight unadjusted linear regression models, one for each of our eight exposure chemicals of interest. The outcome, TSH, remained constant across models. Both exposure and outcome were log-transformed.
+First, we fit eight unadjusted linear regression models, one for each of our eight exposure chemicals of interest. The outcome, TSH, remained constant across models. Both exposure and outcome were log-transformed. All adjusted models included sex, age, race, and household income to control for potential confounding.
+
+```{r}
+library(knitr)
+library(kableExtra)
+
+crude_ols_tidy =
+  map_dfr(crude_ols_models, broom::tidy)
+
+crude_ols_table =
+  crude_ols_tidy %>% 
+  rename("Outcome: log serum TSH" = term) %>% 
+  kable(caption = "Crude linear models") %>% 
+  kable_styling(latex_options = "striped") %>% 
+  pack_rows(
+    index = c(
+      "Model 1" = 2,
+      "Model 2" = 2,
+      "Model 3" = 2,
+      "Model 4" = 2,
+      "Model 5" = 2,
+      "Model 6" = 2,
+      "Model 7" = 2,
+      "Model 8" = 2
+    )
+  ) 
+  
+crude_ols_table %>% save_kable('./figures/crude_table.png')
+
+```
 
 [table of crude results]
 
 # Adjusted log-log OLS (8) - table of results
 
+```{r}
+
+adj_ols_tidy =
+  map_dfr(adj_ols_models, broom::tidy)
+
+adj_ols_table =
+  adj_ols_tidy %>% 
+  filter(str_detect(term, pattern = "Int") | 
+           str_detect(term, pattern = "log")) %>% 
+  rename("Outcome: log serum TSH" = term) %>% 
+  kable(caption = "Adjusted linear models") %>% 
+  kable_styling(latex_options = "striped") %>% 
+  pack_rows(
+    index = c(
+      "Model 1" = 2,
+      "Model 2" = 2,
+      "Model 3" = 2,
+      "Model 4" = 2,
+      "Model 5" = 2,
+      "Model 6" = 2,
+      "Model 7" = 2,
+      "Model 8" = 2
+    )
+  ) %>% 
+  footnote(
+    general_title = " ",
+    "All models adjusted for sex, age, race, and household income."
+  )
+
+adj_ols_table %>% save_kable('./figures/adj_table.png')
+
+```
+
 # Adjusted nonlinear (8) - table of results
+
+```{r}
+
+adj_nonlinear = function(predictor) {
+  
+  covariates = covariate_list
+  
+  gam(reformulate(c(paste0("s(", predictor, ")"), covariates),
+                  "log(tsh)"),
+      data = new_data)
+  
+}
+
+# Example
+# adj_nonlinear("triclosan_creatinine")
+
+adj_nonlinear_models = 
+  map(exposures, adj_nonlinear)
+
+adj_nonlinear_tidy =
+  map_dfr(adj_nonlinear_models, broom::tidy)
+
+adj_nonlinear_table =
+  adj_nonlinear_tidy %>% 
+  filter(str_detect(term, pattern = "Int") | 
+           str_detect(term, pattern = "log")) %>% 
+  rename("Outcome: log serum TSH" = term) %>% 
+  kable(caption = "Adjusted general additive models with penalized thin-plate spline terms applied to log chemical exposures<br>
+        Table of nonparametric spline results",
+        escape = F) %>% 
+  kable_styling() %>% 
+  pack_rows(
+    index = c(
+      "Model 1" = 1,
+      "Model 2" = 1,
+      "Model 3" = 1,
+      "Model 4" = 1,
+      "Model 5" = 1,
+      "Model 6" = 1,
+      "Model 7" = 1,
+      "Model 8" = 1
+    )
+  ) %>% 
+  footnote(
+    general_title = " ",
+    "All models adjusted for sex, age, race, and household income."
+  )
+
+adj_nonlinear_table %>% save_kable('./figures/nonlinear_table.png')
+
+```
+
 
 # Plots:
 
   ## If all OLS, forest plots of effect estimates for eight adjusted models
   
   ## If any nonlinearities, plots of nonlinear function (predicted values?)
+
+<!-- Plot of nonlinearities for benzophenone-3 and methyl paraben   -->
+```{r}
+
+plot(adj_nonlinear_models[[2]])
+title("Adjusted penalized spline: log benzophenone-3 (Outcome: log serum TSH)")
+
+plot(adj_nonlinear_models[[7]])
+title("Adjusted penalized spline: methyl paraben (Outcome: log serum TSH)")
+
+```
+  
+  
