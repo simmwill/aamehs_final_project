@@ -241,3 +241,9 @@ saveRDS(joined_nomiss, './data/new_analytic_dataset.RDS')
 
 ```
 
+ - If we're just looking for significant GAM terms, can interpret and move on
+ - If we're looking for basis for future steps, maybe try other splines???
+
+ - Effect estimate from e.g. mean to 90th percentile 
+  - for 95% CI estimate, use one basis function to describe term in model within dlnm package - then cross_pred argument
+    - set the `cen` argument in the cross_pred - reference level for exposure

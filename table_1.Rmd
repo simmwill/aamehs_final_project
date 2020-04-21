@@ -1,0 +1,97 @@
+---
+title: "table_1"
+author: "Will Simmons"
+date: "4/20/2020"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+# Creating Table 1
+
+Importing data and selecting needed variables
+
+```{r}
+
+library(tidyverse)
+library(knitr)
+library(kableExtra)
+
+table1_df = 
+  readRDS('./data/new_analytic_dataset.RDS') %>% 
+  select(
+    tsh,
+    log_tert_octylphenol_creatinine:log_propyl_paraben_creatinine,
+    -ends_with("_det"),
+    hh_income,
+    sex,
+    age
+  ) %>% 
+  mutate(
+    income = case_when(hh_income %in% c(1:4, 13) ~ "&emsp;< $20,000",
+                       hh_income %in% c(5:7, 12) ~ "&emsp;$20-44,999",
+                       hh_income %in% c(8:10) ~ "&emsp;$45-74,999",
+                       hh_income %in% c(14:15) ~ "&emsp;$75,000+"),
+    income = as.factor(income),
+    income = fct_relevel(income, "&emsp;< $20,000"),
+    sex = case_when(sex == 1 ~ "&emsp;Male", 
+                    sex == 2 ~"&emsp;Female")
+  )
+
+labelled::var_label(table1_df) = 
+  list(
+    tsh = "Thyroid stimulating hormone",                             
+    log_tert_octylphenol_creatinine = "4-tert-octylphenol", 
+    log_benzophenone_3_creatinine = "Benzophenone-3",   
+    log_bpa_creatinine = "Bisphenol A",              
+    log_triclosan_creatinine = "Triclosan",        
+    log_butyl_paraben_creatinine = "Butyl paraben",    
+    log_ethyl_paraben_creatinine = "Ethyl paraben",    
+    log_methyl_paraben_creatinine = "Methyl paraben",   
+    log_propyl_paraben_creatinine = "Propyl paraben",   
+    hh_income = "Annual household income",                       
+    sex = "Sex",                             
+    age = "Age",                            
+    income = "Annual household income"
+  )
+
+```
+
+Creating table
+
+```{r}
+
+library(gt)
+library(gtsummary)
+conflict_prefer("group_rows", "kableExtra")
+
+table_1 =
+  table1_df %>% 
+  select(-hh_income) %>% 
+  tbl_summary() 
+
+table_1$table_header =
+  table_1$table_header %>% 
+  mutate(
+    label = case_when(column == "label" ~ " ",
+                      column == "stat_0" ~ "N = 1,767",
+                      TRUE ~ label)
+  )
+
+table_1 =
+  table_1 %>% 
+  as_kable(
+    caption = "<font size=2.6><b><u>Table 1</b></u><br><b>Demographic and exposure/outcome profile, NHANES 2007-2008</b></font>",
+    escape = FALSE
+  ) %>%  
+  kable_styling() %>% 
+  pack_rows("Outcome serum measure", 1, 1) %>% 
+  pack_rows("Chemical exposures (μg analyte per gram creatinine, log-transformed)", 2, 9) %>% 
+  pack_rows("Demographic factors", 10, 18)
+  
+table_1
+
+# table_1 %>% save_kable('./figures/table_1.png', zoom = 2)
+
+```
+

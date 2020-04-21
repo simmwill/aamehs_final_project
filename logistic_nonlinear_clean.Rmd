@@ -19,7 +19,9 @@ shh(library(tidyverse))
 shh(library(cowplot))
 shh(library(patchwork))
 shh(library(viridis))
+shh(library(mgcv))
 shh(library(conflicted))
+conflict_prefer("filter", "dplyr")
 
 new_data = readRDS('./data/new_analytic_dataset.RDS')
 
@@ -96,6 +98,27 @@ adj_ols_models =
 
 ```
 
+<!-- Adjusted linear models, created with gam() to compare with nonlinear models via GCV score -->
+```{r}
+
+adj_ols_gam = function(predictor) {
+  
+  covariates = covariate_list
+  
+  gam(reformulate(c(as.character(predictor), covariates),
+                  'log(tsh)'),
+      data = new_data) 
+  
+}
+
+# Example
+# adj_ols('bpa_creatinine')
+
+# Map over all
+adj_ols_models_gam =
+  map(exposures, adj_ols_gam)
+
+```
 
 # Justification of log-log - (1) example diagnostic plot
 
@@ -165,7 +188,7 @@ crude_ols_table =
     )
   ) 
   
-crude_ols_table %>% save_kable('./figures/crude_table.png')
+# crude_ols_table %>% save_kable('./figures/crude_table.png')
 
 ```
 
@@ -202,7 +225,7 @@ adj_ols_table =
     "All models adjusted for sex, age, race, and household income."
   )
 
-adj_ols_table %>% save_kable('./figures/adj_table.png')
+# adj_ols_table %>% save_kable('./figures/adj_table.png')
 
 ```
 
@@ -255,7 +278,7 @@ adj_nonlinear_table =
     "All models adjusted for sex, age, race, and household income."
   )
 
-adj_nonlinear_table %>% save_kable('./figures/nonlinear_table.png')
+# adj_nonlinear_table %>% save_kable('./figures/nonlinear_table.png')
 
 ```
 
@@ -277,4 +300,295 @@ title("Adjusted penalized spline: methyl paraben (Outcome: log serum TSH)")
 
 ```
   
+# Comparing models with GCV score
+
+```{r}
+
+# Models 2 and 7
+
+adj_ols_models_gam[[2]]$gcv.ubre
+adj_nonlinear_models[[2]]$gcv.ubre
+
+adj_ols_models_gam[[7]]$gcv.ubre
+adj_nonlinear_models[[7]]$gcv.ubre
+
+```
+
+# Trying natural spline term in lm()
+
+```{r}
+
+library(splines)
+
+# Compare to adj_ols_models[[2]]
+adj_nat_spline_2_2df = lm(
+  data = new_data,
+  formula = log(tsh) ~ ns(log_benzophenone_3_creatinine, df = 2) + sex + age + race + hh_income
+)
+AIC(adj_nat_spline_2_2df)
+# AIC = 3576.504
+
+adj_nat_spline_2_3df = lm(
+  data = new_data,
+  formula = log(tsh) ~ ns(log_benzophenone_3_creatinine, df = 3) + sex + age + race + hh_income
+)
+AIC(adj_nat_spline_2_3df)
+# AIC = 3573.706*** 
+
+adj_nat_spline_2_4df = lm(
+  data = new_data,
+  formula = log(tsh) ~ ns(log_benzophenone_3_creatinine, df = 4) + sex + age + race + hh_income
+)
+AIC(adj_nat_spline_2_4df)
+# AIC = 3574.914
+
+# Compare to adj_ols_models[[7]]
+adj_nat_spline_7_2df = lm(
+  data = new_data,
+  formula = log(tsh) ~ ns(log_methyl_paraben_creatinine, df = 2) + sex + age + race + hh_income
+)
+AIC(adj_nat_spline_7_2df)
+# AIC = 3577.454
+
+adj_nat_spline_7_3df = lm(
+  data = new_data,
+  formula = log(tsh) ~ ns(log_methyl_paraben_creatinine, df = 3) + sex + age + race + hh_income
+)
+AIC(adj_nat_spline_7_3df)
+# AIC = 3575.892***
+
+adj_nat_spline_7_4df = lm(
+  data = new_data,
+  formula = log(tsh) ~ ns(log_methyl_paraben_creatinine, df = 4) + sex + age + race + hh_income
+)
+AIC(adj_nat_spline_7_4df)
+# AIC = 3576.337
+
+```
+
+# Predicting and plotting both df=3 natural splines
+
+```{r}
+
+# Model 2
+predictions_2 =
+  predict(adj_nat_spline_2_3df,
+          se.fit = TRUE,
+          type = 'terms') %>% 
+  as.data.frame() %>% 
+  as_tibble() %>% 
+  select(
+    fit = fit.ns.log_benzophenone_3_creatinine..df...3.,
+    se = se.fit.ns.log_benzophenone_3_creatinine..df...3.
+  ) %>% 
+  mutate(
+    lb = fit - se*1.96,
+    ub = fit + se*1.96,
+    x = new_data$log_benzophenone_3_creatinine
+  )
+
+ggplot(data = predictions_2, aes(x = x, y = fit)) +
+  geom_line() +
+  geom_line(aes(y = lb)) +
+  geom_line(aes(y = ub)) +
+  geom_rug(sides = "b")
+
+
+# Model 7
+predictions_7 = 
+  predict(adj_nat_spline_7_3df,
+          se.fit = TRUE,
+          type = 'terms') %>% 
+  as.data.frame() %>% 
+  as_tibble() %>% 
+  select(
+    fit = fit.ns.log_methyl_paraben_creatinine..df...3.,
+    se = se.fit.ns.log_methyl_paraben_creatinine..df...3.
+  ) %>% 
+  mutate(
+    lb = fit - se*1.96,
+    ub = fit + se*1.96,
+    x = new_data$log_methyl_paraben_creatinine
+  )
+
+ggplot(data = predictions_7, aes(x = x, y = fit)) +
+  geom_line() +
+  geom_line(aes(y = lb)) +
+  geom_line(aes(y = ub))
+
+```
+
+# Plotting predicted values with linear regression predictions
+
+```{r}
+
+predictions_ols_2 =
+  predict(adj_ols_models[[2]],
+          se.fit = TRUE,
+          type = 'terms') %>% 
+  as.data.frame() %>% 
+  as_tibble() %>% 
+  select(
+    fit = fit.log_benzophenone_3_creatinine,
+    se = se.fit.log_benzophenone_3_creatinine
+  ) %>% 
+  mutate(
+    lb = fit - se*1.96,
+    ub = fit + se*1.96,
+    x = new_data$log_benzophenone_3_creatinine
+  )
+
+ggplot(data = predictions_ols_2, aes(x = x, y = fit)) +
+  geom_line() +
+  geom_line(aes(y = lb)) +
+  geom_line(aes(y = ub)) +
   
+  geom_line(data = predictions_2, aes(x = x, y = fit), color = 'indianred') +
+  geom_line(data = predictions_2, aes(y = lb), color = 'indianred', alpha = 0.4) +
+  geom_line(data = predictions_2, aes(y = ub), color = 'indianred', alpha = 0.4)
+
+predictions_ols_7 =
+  predict(adj_ols_models[[7]],
+          se.fit = TRUE,
+          type = 'terms') %>% 
+  as.data.frame() %>% 
+  as_tibble() %>% 
+  select(
+    fit = fit.log_methyl_paraben_creatinine,
+    se = se.fit.log_methyl_paraben_creatinine
+  ) %>% 
+  mutate(
+    lb = fit - se*1.96,
+    ub = fit + se*1.96,
+    x = new_data$log_methyl_paraben_creatinine
+  )
+
+ggplot(data = predictions_ols_7, aes(x = x, y = fit)) +
+  geom_line() +
+  geom_line(aes(y = lb)) +
+  geom_line(aes(y = ub)) +
+  
+  geom_line(data = predictions_7, aes(x = x, y = fit), color = 'indianred') +
+  geom_line(data = predictions_7, aes(y = lb), color = 'indianred', alpha = 0.4) +
+  geom_line(data = predictions_7, aes(y = ub), color = 'indianred', alpha = 0.4)
+
+```
+
+# Predicting GAM for final nonlinear figure
+
+```{r}
+
+# GAM 2
+predictions_gam_2 =
+  predict(adj_nonlinear_models[[2]],
+          se.fit = TRUE,
+          type = 'terms') %>% 
+  as.data.frame() %>% 
+  as_tibble() %>% 
+  select(
+    fit = fit.s.log_benzophenone_3_creatinine.,
+    se = se.fit.s.log_benzophenone_3_creatinine.
+  ) %>% 
+  mutate(
+    lb = fit - se*1.96,
+    ub = fit + se*1.96,
+    x = new_data$log_benzophenone_3_creatinine
+  )
+
+ggplot(data = predictions_ols_2, aes(x = x, y = fit)) +
+  geom_line(color = 'indianred', size = .7) +
+  geom_line(aes(y = lb), color = 'gray') + 
+  geom_line(aes(y = ub), color = 'gray') + 
+  
+  geom_line(data = predictions_gam_2, aes(x = x, y = fit), size = 1) +
+  geom_line(data = predictions_gam_2, aes(y = lb), size = .8) +
+  geom_line(data = predictions_gam_2, aes(y = ub), size = .8) +
+  
+  theme_bw()
+
+
+# GAM 7
+predictions_gam_7 =
+  predict(adj_nonlinear_models[[7]],
+          se.fit = TRUE,
+          type = 'terms') %>% 
+  as.data.frame() %>% 
+  as_tibble() %>% 
+  select(
+    fit = fit.s.log_methyl_paraben_creatinine.,
+    se = se.fit.s.log_methyl_paraben_creatinine.
+  ) %>% 
+  mutate(
+    lb = fit - se*1.96,
+    ub = fit + se*1.96,
+    x = new_data$log_methyl_paraben_creatinine
+  )
+
+ggplot(data = predictions_ols_7, aes(x = x, y = fit), size = 1) +
+  geom_line(color = 'indianred', size = .7) +
+  geom_line(aes(y = lb), color = 'gray') +
+  geom_line(aes(y = ub), color = 'gray') +
+  
+  geom_line(data = predictions_gam_7, aes(x = x, y = fit)) +
+  geom_line(data = predictions_gam_7, aes(y = lb), size = .8) +
+  geom_line(data = predictions_gam_7, aes(y = ub), size = .8) +
+  
+  theme_bw()
+
+```
+
+# Final Figure 2
+
+```{r}
+
+plot_2 =
+  ggplot(data = predictions_ols_2, aes(x = x, y = fit)) +
+  geom_line(color = 'indianred', size = .7) +
+  geom_line(aes(y = lb), color = 'indianred', size = .4, linetype = 'dotted') +
+  geom_line(aes(y = ub), color = 'indianred', size = .4, linetype = 'dotted') +
+  
+  geom_line(data = predictions_gam_2, aes(x = x, y = fit), size = 1) +
+  geom_line(data = predictions_gam_2, aes(y = lb), size = .8) +
+  geom_line(data = predictions_gam_2, aes(y = ub), size = .8) +
+  
+  theme_bw() +
+  ggtitle("A.") +
+  labs(x = "log benzophenone-3 (μg/g creatinine)",
+       y = "log thyroid stimulating hormone (uIU/mL)") +
+  ylim(-0.5, 0.6)
+
+
+plot_7 =
+  ggplot(data = predictions_ols_7, aes(x = x, y = fit)) +
+  geom_line(color = 'indianred', size = .7) +
+  geom_line(aes(y = lb), color = 'indianred', size = .4, linetype = 'dotted') +
+  geom_line(aes(y = ub), color = 'indianred', size = .4, linetype = 'dotted') +
+  
+  geom_line(data = predictions_gam_7, aes(x = x, y = fit), size = 1) +
+  geom_line(data = predictions_gam_7, aes(y = lb), size = .8) +
+  geom_line(data = predictions_gam_7, aes(y = ub), size = .8) +
+  
+  theme_bw() +
+  ggtitle("B.") +
+  labs(x = "log methyl paraben (μg/g creatinine)",
+       y = "") +
+  ylim(-0.5, 0.6) 
+
+figure_3 =
+  cowplot::plot_grid(plotlist = list(plot_2, plot_7)) %>%
+  patchwork::wrap_elements() +
+  ggtitle(
+    "Figure 3. Linear (red) and penalized spline (black) terms for log exposure values",
+    subtitle = "Plotted against log thyroid stimulating hormone, with 95% confidence intervals"
+  ) +
+  labs(caption = "\nLinear and penalized spline models adjusted for creatinine, sex, age, race, and household income.") +
+  theme(plot.caption = element_text(hjust = 0))
+
+library(Cairo)
+ggsave(plot = figure_3,
+       './figures/figure_3.png',
+       dpi = 300,
+       width = 10, height = 6,
+       type = 'cairo')
+```
+
