@@ -109,7 +109,8 @@ bpa.ForestPlot.Mods <- ggplot(data=coeff.table, # defines what dataset we are us
   geom_errorbar()+                  # creates lines with bars
   geom_hline(aes(yintercept=0.0), lty=2) + # add a dashed line at y=0 
   xlab("Model Name") +              # labels for axes
-  ylab(expression("Coefficient for BPA (95% CI)"))
+  ylab(expression("Coefficient for BPA (95% CI)"))+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) 
 
 bpa.ForestPlot.Mods
 
@@ -173,7 +174,8 @@ octyphenol.ForestPlot.Mods <- ggplot(data=coeff.table, # defines what dataset we
   geom_errorbar()+                  # creates lines with bars
   geom_hline(aes(yintercept=0.0), lty=2) + # add a dashed line at y=0 
   xlab("Model Name") +              # labels for axes
-  ylab(expression("Coefficient for Tert Octylphenol (95% CI)"))
+  ylab(expression("Coefficient for Tert Octylphenol (95% CI)"))+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) 
 
 octyphenol.ForestPlot.Mods
 
@@ -237,7 +239,8 @@ benzo.ForestPlot.Mods <- ggplot(data=coeff.table, # defines what dataset we are 
   geom_errorbar()+                  # creates lines with bars
   geom_hline(aes(yintercept=0.0), lty=2) + # add a dashed line at y=0 
   xlab("Model Name") +              # labels for axes
-  ylab(expression("Coefficient for Benzophenone (95% CI)"))
+  ylab(expression("Coefficient for Benzophenone (95% CI)"))+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) 
 
 benzo.ForestPlot.Mods
 
@@ -301,7 +304,8 @@ triclo.ForestPlot.Mods <- ggplot(data=coeff.table, # defines what dataset we are
   geom_errorbar()+                  # creates lines with bars
   geom_hline(aes(yintercept=0.0), lty=2) + # add a dashed line at y=0 
   xlab("Model Name") +              # labels for axes
-  ylab(expression("Coefficient for Triclosan (95% CI)"))
+  ylab(expression("Coefficient for Triclosan (95% CI)"))+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) 
 
 triclo.ForestPlot.Mods
 ####**********************************************************************
@@ -363,7 +367,8 @@ bparaben.ForestPlot.Mods <- ggplot(data=coeff.table, # defines what dataset we a
   geom_errorbar()+                  # creates lines with bars
   geom_hline(aes(yintercept=0.0), lty=2) + # add a dashed line at y=0 
   xlab("Model Name") +              # labels for axes
-  ylab(expression("Coefficient for Butyl Paraben (95% CI)"))
+  ylab(expression("Coefficient for Butyl Paraben (95% CI)"))+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) 
 
 bparaben.ForestPlot.Mods
 
@@ -427,7 +432,8 @@ eparaben.ForestPlot.Mods <- ggplot(data=coeff.table, # defines what dataset we a
   geom_errorbar()+                  # creates lines with bars
   geom_hline(aes(yintercept=0.0), lty=2) + # add a dashed line at y=0 
   xlab("Model Name") +              # labels for axes
-  ylab(expression("Coefficient for Ethyl Paraben (95% CI)"))
+  ylab(expression("Coefficient for Ethyl Paraben (95% CI)"))+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) 
 
 eparaben.ForestPlot.Mods
 ####**********************************************************************
@@ -489,7 +495,8 @@ mparaben.ForestPlot.Mods <- ggplot(data=coeff.table, # defines what dataset we a
   geom_errorbar()+                  # creates lines with bars
   geom_hline(aes(yintercept=0.0), lty=2) + # add a dashed line at y=0 
   xlab("Model Name") +              # labels for axes
-  ylab(expression("Coefficient for Methyl Paraben (95% CI)"))
+  ylab(expression("Coefficient for Methyl Paraben (95% CI)")) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) 
 
 mparaben.ForestPlot.Mods
 
@@ -552,7 +559,8 @@ pparaben.ForestPlot.Mods <- ggplot(data=coeff.table, # defines what dataset we a
   geom_errorbar()+                  # creates lines with bars
   geom_hline(aes(yintercept=0.0), lty=2) + # add a dashed line at y=0 
   xlab("Model Name") +              # labels for axes
-  ylab(expression("Coefficient for Propyl Paraben (95% CI)"))
+  ylab(expression("Coefficient for Propyl Paraben (95% CI)"))+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) 
 
 pparaben.ForestPlot.Mods
 
@@ -560,6 +568,22 @@ pparaben.ForestPlot.Mods
 ####**********************************************************************
 #### All plots ####
 ####**********************************************************************
+a = ggpubr::ggarrange(
+plot(bpa.ForestPlot.Mods),
+plot (octyphenol.ForestPlot.Mods),
+plot (benzo.ForestPlot.Mods),
+plot (triclo.ForestPlot.Mods)
+)
+b = ggpubr::ggarrange(
+plot(bparaben.ForestPlot.Mods),
+plot(eparaben.ForestPlot.Mods),
+plot(mparaben.ForestPlot.Mods),
+plot(pparaben.ForestPlot.Mods)
+)
+
+ggpubr::ggarrange (a, b)
+
+
 bpa.ForestPlot.Mods
 dev.copy(png,'BPA.png')
 dev.off()
